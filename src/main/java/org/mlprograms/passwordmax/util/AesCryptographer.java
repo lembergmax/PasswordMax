@@ -6,6 +6,10 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Optional;
@@ -13,11 +17,42 @@ import java.util.Optional;
 @Slf4j
 public class AesCryptographer {
 
+    private final String APP_FOLDER_NAME = ".passwordmax";
+    private final String SECRET_KEY_FILE = "secret.key";
+    private final String INITIALIZATION_VECTOR_KEY_FILE = "initializationVector.key";
     private final int INITIALIZATION_VECTOR_SIZE = 256;
     private final int KEY_SIZE = 256;
 
     private final String ALGORITHM = "AES/GCM/NoPadding";
     private final int TAG_LENGTH_BIT = 128;
+
+    private final Path appFolder;
+    private final Path secretKeyPath;
+    private final Path initializationVectorPath;
+
+    public AesCryptographer() {
+        final String userHome = System.getProperty("user.home");
+        this.appFolder = Path.of(userHome, APP_FOLDER_NAME);
+        this.secretKeyPath = appFolder.resolve(SECRET_KEY_FILE);
+        this.initializationVectorPath = appFolder.resolve(INITIALIZATION_VECTOR_KEY_FILE);
+        createKeyFolder();
+    }
+
+    private void createKeyFolder() {
+        try {
+            if (!Files.exists(appFolder)) {
+                Files.createDirectories(appFolder);
+
+                if (System.getProperty("os.name").toLowerCase().contains("win")) {
+                    final ProcessBuilder processBuilder = new ProcessBuilder("attrib", "+H", appFolder.toString());
+                    processBuilder.inheritIO().start();
+                }
+            }
+        } catch (final IOException ioException) {
+            log.error("Konnte App-Verzeichnis nicht anlegen: {}", appFolder, ioException);
+            throw new RuntimeException("Konnte App-Verzeichnis nicht anlegen", ioException);
+        }
+    }
 
     public Optional<SecretKey> generateSecretKey() {
         Optional<SecretKey> result;
@@ -61,6 +96,57 @@ public class AesCryptographer {
         final byte[] decodedText = Base64.getDecoder().decode(text);
         final byte[] plaintext = cipher.doFinal(decodedText);
         return new String(plaintext);
+    }
+
+    public SecretKey getSecretKey() {
+        try {
+            if (Files.exists(secretKeyPath)) {
+                return loadSecretKey(secretKeyPath);
+            }
+
+            final SecretKey secretKey = generateSecretKey().orElseThrow();
+            saveSecretKey(secretKey, secretKeyPath);
+            return secretKey;
+        } catch (final Exception exception) {
+            log.error("Fehler beim Laden des geheimen Schlüssels", exception);
+            throw new RuntimeException(exception);
+        }
+    }
+
+    public byte[] getInitializationVector() {
+        try {
+            if (Files.exists(initializationVectorPath)) {
+                return loadInitializationVector(initializationVectorPath);
+            }
+
+            final byte[] initializationVector = generateInitializationVector();
+            saveInitializationVector(initializationVector, initializationVectorPath);
+            return initializationVector;
+        } catch (final Exception exception) {
+            log.error("Fehler beim Laden des Initialisierungsvektors", exception);
+            throw new RuntimeException(exception);
+        }
+    }
+
+    private void saveSecretKey(final SecretKey secretKey, final Path filePath) throws Exception {
+        final String base64Key = Base64.getEncoder().encodeToString(secretKey.getEncoded());
+        Files.writeString(filePath, base64Key);
+    }
+
+    private SecretKey loadSecretKey(final Path filePath) throws Exception {
+        final String base64Key = Files.readString(filePath);
+        final byte[] decoded = Base64.getDecoder().decode(base64Key);
+        return new SecretKeySpec(decoded, "AES");
+    }
+
+    private void saveInitializationVector(final byte[] initializationVector, final Path filePath) throws Exception {
+        final String base64Iv = Base64.getEncoder().encodeToString(initializationVector);
+        Files.writeString(filePath, base64Iv);
+    }
+
+    private byte[] loadInitializationVector(final Path filePath) throws Exception {
+        final String base64Iv = Files.readString(filePath);
+        return Base64.getDecoder().decode(base64Iv);
     }
 
 }

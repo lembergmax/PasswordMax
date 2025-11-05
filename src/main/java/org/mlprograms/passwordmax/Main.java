@@ -8,17 +8,17 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         final AesCryptographer aesCryptographer = new AesCryptographer();
-        SecretKey secretKey = aesCryptographer.generateSecretKey().get();
-        byte[] initializationVector = aesCryptographer.generateInitializationVector();
+        final SecretKey secretKey = aesCryptographer.getSecretKey();
+        final byte[] initializationVector = aesCryptographer.getInitializationVector();
 
-        // Text verschlüsseln
-        String originalText = "Das ist ein geheimer Text!";
-        String encryptedText = aesCryptographer.encrypt(originalText, secretKey, initializationVector);
-        String decryptedText = aesCryptographer.decrypt(encryptedText, secretKey, initializationVector);
+        // Beispieltext verschlüsseln
+        String original = "Das ist ein geheimer Text!";
+        String encrypted = aesCryptographer.encrypt(original, secretKey, initializationVector);
+        String decrypted = aesCryptographer.decrypt(encrypted, secretKey, initializationVector);
 
-        System.out.println("Ursprünglich: " + originalText);
-        System.out.println("Verschlüsselt: " + encryptedText);
-        System.out.println("Entschlüsselt: " + decryptedText);
+        System.out.println("Original:     " + original);
+        System.out.println("Verschlüsselt:" + encrypted);
+        System.out.println("Entschlüsselt:" + decrypted);
     }
 
 }
