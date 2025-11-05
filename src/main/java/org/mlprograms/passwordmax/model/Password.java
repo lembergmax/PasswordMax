@@ -7,8 +7,8 @@ import lombok.Getter;
 @AllArgsConstructor
 public class Password {
 
-    private String password;
     private String username;
+    private String password;
     private String email;
     private String notes;
 

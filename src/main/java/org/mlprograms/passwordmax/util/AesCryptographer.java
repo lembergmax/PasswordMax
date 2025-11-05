@@ -7,7 +7,6 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
@@ -17,7 +16,6 @@ import java.util.Optional;
 @Slf4j
 public class AesCryptographer {
 
-    private final String APP_FOLDER_NAME = ".passwordmax";
     private final String SECRET_KEY_FILE = "secret.key";
     private final String INITIALIZATION_VECTOR_KEY_FILE = "initializationVector.key";
     private final int INITIALIZATION_VECTOR_SIZE = 256;
@@ -26,32 +24,16 @@ public class AesCryptographer {
     private final String ALGORITHM = "AES/GCM/NoPadding";
     private final int TAG_LENGTH_BIT = 128;
 
-    private final Path appFolder;
     private final Path secretKeyPath;
     private final Path initializationVectorPath;
 
     public AesCryptographer() {
-        final String userHome = System.getProperty("user.home");
-        this.appFolder = Path.of(userHome, APP_FOLDER_NAME);
+        final FolderController folderController = new FolderController();
+        folderController.createKeyFolder();
+
+        final Path appFolder = folderController.getAppFolder();
         this.secretKeyPath = appFolder.resolve(SECRET_KEY_FILE);
         this.initializationVectorPath = appFolder.resolve(INITIALIZATION_VECTOR_KEY_FILE);
-        createKeyFolder();
-    }
-
-    private void createKeyFolder() {
-        try {
-            if (!Files.exists(appFolder)) {
-                Files.createDirectories(appFolder);
-
-                if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                    final ProcessBuilder processBuilder = new ProcessBuilder("attrib", "+H", appFolder.toString());
-                    processBuilder.inheritIO().start();
-                }
-            }
-        } catch (final IOException ioException) {
-            log.error("Konnte App-Verzeichnis nicht anlegen: {}", appFolder, ioException);
-            throw new RuntimeException("Konnte App-Verzeichnis nicht anlegen", ioException);
-        }
     }
 
     public Optional<SecretKey> generateSecretKey() {
