@@ -27,13 +27,15 @@ public class AesCryptographer {
     private final Path secretKeyPath;
     private final Path initializationVectorPath;
 
-    public AesCryptographer() {
+    public AesCryptographer(final String username) {
         final FolderController folderController = new FolderController();
         folderController.createAppFolders();
 
-        final Path appFolder = folderController.getAppFolder();
-        this.secretKeyPath = appFolder.resolve(SECRET_KEY_FILE);
-        this.initializationVectorPath = appFolder.resolve(INITIALIZATION_VECTOR_KEY_FILE);
+        folderController.createUserKeyFolder(username);
+
+        final Path userKeyFolder = folderController.getKeyFolderForUser(username);
+        this.secretKeyPath = userKeyFolder.resolve(SECRET_KEY_FILE);
+        this.initializationVectorPath = userKeyFolder.resolve(INITIALIZATION_VECTOR_KEY_FILE);
     }
 
     private Optional<SecretKey> generateSecretKey() {
@@ -119,6 +121,7 @@ public class AesCryptographer {
             throw new RuntimeException(exception);
         }
     }
+
 
     private void saveSecretKey(final SecretKey secretKey, final Path filePath) throws Exception {
         final String base64Key = Base64.getEncoder().encodeToString(secretKey.getEncoded());

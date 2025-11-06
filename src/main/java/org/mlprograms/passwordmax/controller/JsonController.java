@@ -58,7 +58,7 @@ public class JsonController {
             return;
         }
 
-        final AesCryptographer aesCryptographer = new AesCryptographer();
+        final AesCryptographer aesCryptographer = new AesCryptographer(accountToAdd.getName());
 
         accounts.add(new Account(
                 accountToAdd.getName(),

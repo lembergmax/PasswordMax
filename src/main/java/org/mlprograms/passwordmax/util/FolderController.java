@@ -52,4 +52,20 @@ public class FolderController {
         }
     }
 
+    public Path getKeyFolderForUser(final String username) {
+        return appFolder.resolve("keys").resolve(username);
+    }
+
+    public void createUserKeyFolder(final String username) {
+        try {
+            final Path userKeyFolder = getKeyFolderForUser(username);
+            if (!Files.exists(userKeyFolder)) {
+                Files.createDirectories(userKeyFolder);
+            }
+        } catch (final IOException ioException) {
+            log.error("Konnte Benutzer-Key-Verzeichnis nicht anlegen: {}", username, ioException);
+            throw new RuntimeException("Konnte Benutzer-Key-Verzeichnis nicht anlegen", ioException);
+        }
+    }
+
 }
