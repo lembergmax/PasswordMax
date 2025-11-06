@@ -8,7 +8,7 @@ public class Main {
 
     public static void main(String[] args) {
         final JsonController jsonController = new JsonController();
-        // addSampleData(jsonController);
+        addSampleData(jsonController);
 
         jsonController.loadDataFromJson().forEach(account -> {
             System.out.println("Konto: " + account.getName() + " (Masterpasswort: " + account.getPassword() + ")");
