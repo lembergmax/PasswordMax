@@ -19,7 +19,12 @@ public class FolderController {
         this.appFolder = Path.of(USER_HOME_PATH, APP_FOLDER_NAME);
     }
 
-    public void createKeyFolder() {
+    public void createAppFolders() {
+        createAppFolder();
+        createKeyFolder();
+    }
+
+    private void createAppFolder() {
         try {
             if (!Files.exists(appFolder)) {
                 Files.createDirectories(appFolder);
@@ -32,6 +37,18 @@ public class FolderController {
         } catch (final IOException ioException) {
             log.error("Konnte App-Verzeichnis nicht anlegen: {}", appFolder, ioException);
             throw new RuntimeException("Konnte App-Verzeichnis nicht anlegen", ioException);
+        }
+    }
+
+    private void createKeyFolder() {
+        try {
+            final Path keyFolder = appFolder.resolve("keys");
+            if (!Files.exists(keyFolder)) {
+                Files.createDirectories(keyFolder);
+            }
+        } catch (final IOException ioException) {
+            log.error("Konnte Key-Verzeichnis nicht anlegen", ioException);
+            throw new RuntimeException("Konnte Key-Verzeichnis nicht anlegen", ioException);
         }
     }
 

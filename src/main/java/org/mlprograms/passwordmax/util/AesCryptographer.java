@@ -29,14 +29,14 @@ public class AesCryptographer {
 
     public AesCryptographer() {
         final FolderController folderController = new FolderController();
-        folderController.createKeyFolder();
+        folderController.createAppFolders();
 
         final Path appFolder = folderController.getAppFolder();
         this.secretKeyPath = appFolder.resolve(SECRET_KEY_FILE);
         this.initializationVectorPath = appFolder.resolve(INITIALIZATION_VECTOR_KEY_FILE);
     }
 
-    public Optional<SecretKey> generateSecretKey() {
+    private Optional<SecretKey> generateSecretKey() {
         Optional<SecretKey> result;
 
         try {
@@ -51,7 +51,7 @@ public class AesCryptographer {
         return result;
     }
 
-    public byte[] generateInitializationVector() {
+    private byte[] generateInitializationVector() {
         final byte[] initializationVector = new byte[INITIALIZATION_VECTOR_SIZE];
         final SecureRandom secureRandom = new SecureRandom();
         secureRandom.nextBytes(initializationVector);
@@ -59,25 +59,35 @@ public class AesCryptographer {
         return initializationVector;
     }
 
-    public String encrypt(final String text, final SecretKey secretKey, final byte[] initializationVector) throws Exception {
-        final Cipher cipher = Cipher.getInstance(ALGORITHM);
-        final GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, initializationVector);
+    public String encrypt(final String text, final SecretKey secretKey, final byte[] initializationVector) {
+        try {
+            final Cipher cipher = Cipher.getInstance(ALGORITHM);
+            final GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, initializationVector);
 
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmParameterSpec);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmParameterSpec);
 
-        final byte[] ciphertext = cipher.doFinal(text.getBytes());
-        return Base64.getEncoder().encodeToString(ciphertext);
+            final byte[] ciphertext = cipher.doFinal(text.getBytes());
+            return Base64.getEncoder().encodeToString(ciphertext);
+        } catch (final Exception exception) {
+            log.error("Fehler beim Verschlüsseln des Textes", exception);
+            throw new RuntimeException(exception);
+        }
     }
 
-    public String decrypt(final String text, final SecretKey secretKey, final byte[] initializationVector) throws Exception {
-        final Cipher cipher = Cipher.getInstance(ALGORITHM);
-        final GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, initializationVector);
+    public String decrypt(final String text, final SecretKey secretKey, final byte[] initializationVector) {
+        try {
+            final Cipher cipher = Cipher.getInstance(ALGORITHM);
+            final GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(TAG_LENGTH_BIT, initializationVector);
 
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
 
-        final byte[] decodedText = Base64.getDecoder().decode(text);
-        final byte[] plaintext = cipher.doFinal(decodedText);
-        return new String(plaintext);
+            final byte[] decodedText = Base64.getDecoder().decode(text);
+            final byte[] plaintext = cipher.doFinal(decodedText);
+            return new String(plaintext);
+        } catch (final Exception exception) {
+            log.error("Fehler beim Entschlüsseln des Textes", exception);
+            throw new RuntimeException(exception);
+        }
     }
 
     public SecretKey getSecretKey() {

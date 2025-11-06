@@ -11,12 +11,12 @@ public class Account {
 
     private String name;
     private String password;
-    private List<Password> passwords;
+    private List<Entry> entries;
 
     public Account(String name, String password) {
         this.name = name;
         this.password = password;
-        this.passwords = List.of();
+        this.entries = List.of();
     }
 
 }

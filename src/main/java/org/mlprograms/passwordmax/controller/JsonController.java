@@ -5,7 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
 import org.mlprograms.passwordmax.model.Account;
-import org.mlprograms.passwordmax.model.Password;
+import org.mlprograms.passwordmax.model.Entry;
+import org.mlprograms.passwordmax.util.AesCryptographer;
 import org.mlprograms.passwordmax.util.FolderController;
 
 import java.io.File;
@@ -20,15 +21,16 @@ import java.util.List;
 @Slf4j
 public class JsonController {
 
+    public static final String DATA_JSON_FILE = "data.json";
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final Path jsonPath;
 
     public JsonController() {
         final FolderController folderController = new FolderController();
-        folderController.createKeyFolder();
+        folderController.createAppFolders();
 
         final Path appFolder = folderController.getAppFolder();
-        this.jsonPath = appFolder.resolve("data.json");
+        this.jsonPath = appFolder.resolve(DATA_JSON_FILE);
         createJsonFileIfNecessary();
     }
 
@@ -44,6 +46,41 @@ public class JsonController {
         } catch (final Exception e) {
             log.error("Fehler beim erstellen der JSON-Datei: {}", jsonPath, e);
         }
+    }
+
+    public void addAccount(final Account accountToAdd) {
+        final List<Account> accounts = loadDataFromJson();
+        final boolean existsAccount = accounts.stream()
+                .anyMatch(account -> account.getName().equalsIgnoreCase(accountToAdd.getName()));
+
+        if (existsAccount) {
+            log.warn("Konto '{}' existiert bereits", accountToAdd.getName());
+            return;
+        }
+
+        final AesCryptographer aesCryptographer = new AesCryptographer();
+
+        accounts.add(new Account(
+                accountToAdd.getName(),
+                aesCryptographer.encrypt(accountToAdd.getPassword(), aesCryptographer.getSecretKey(), aesCryptographer.getInitializationVector()),
+                new ArrayList<>()));
+        saveDataToJson(accounts);
+        log.info("Konto '{}' wurde hinzugefügt", accountToAdd.getName());
+    }
+
+    public void addPasswordToAccount(final String accountName, final Entry entry) {
+        final List<Account> accounts = loadDataFromJson();
+
+        for (final Account account : accounts) {
+            if (account.getName().equals(accountName)) {
+                account.getEntries().add(entry);
+                saveDataToJson(accounts);
+                log.info("Passwort zu Konto '{}' hinzugefügt", accountName);
+                return;
+            }
+        }
+
+        log.warn("Konto '{}' nicht gefunden – Passwort konnte nicht hinzugefügt werden", accountName);
     }
 
     public List<Account> loadDataFromJson() {
@@ -66,36 +103,6 @@ public class JsonController {
             log.error("Fehler beim Speichern der JSON-Daten", exception);
             throw new RuntimeException("Fehler beim Speichern der JSON-Daten", exception);
         }
-    }
-
-    public void addAccount(final Account account) {
-        final List<Account> accounts = loadDataFromJson();
-        final boolean exists = accounts.stream()
-                .anyMatch(acc -> acc.getName().equalsIgnoreCase(account.getName()));
-
-        if (exists) {
-            log.warn("Konto '{}' existiert bereits", account.getName());
-            return;
-        }
-
-        accounts.add(new Account(account.getName(), account.getPassword(), new ArrayList<>()));
-        saveDataToJson(accounts);
-        log.info("Konto '{}' wurde hinzugefügt", account.getName());
-    }
-
-    public void addPasswordToAccount(final String accountName, final Password password) {
-        final List<Account> accounts = loadDataFromJson();
-
-        for (final Account account : accounts) {
-            if (account.getName().equalsIgnoreCase(accountName)) {
-                account.getPasswords().add(password);
-                saveDataToJson(accounts);
-                log.info("Passwort zu Konto '{}' hinzugefügt", accountName);
-                return;
-            }
-        }
-
-        log.warn("Konto '{}' nicht gefunden – Passwort konnte nicht hinzugefügt werden", accountName);
     }
 
 }
