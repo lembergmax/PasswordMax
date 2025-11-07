@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-public final class Cryptographer {
+public class Cryptographer {
 
     private static final String CIPHER = "AES/GCM/NoPadding";
     private static final int INITIALIZATION_VECTOR_LENGTH = 12;
