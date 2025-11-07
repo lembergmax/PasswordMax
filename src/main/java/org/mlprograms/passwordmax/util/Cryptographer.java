@@ -59,15 +59,15 @@ public class Cryptographer {
 
     public String decrypt(final String text, final String decryptionKey) {
         try {
-            byte[] all = Base64.getDecoder().decode(text);
+            byte[] decodedBytes = Base64.getDecoder().decode(text);
 
-            if (all.length < SALT_LENGTH + INITIALIZATION_VECTOR_LENGTH) {
+            if (decodedBytes.length < SALT_LENGTH + INITIALIZATION_VECTOR_LENGTH) {
                 throw new IllegalArgumentException("Input too short");
             }
 
-            byte[] salt = Arrays.copyOfRange(all, 0, SALT_LENGTH);
-            byte[] initializationVector = Arrays.copyOfRange(all, SALT_LENGTH, SALT_LENGTH + INITIALIZATION_VECTOR_LENGTH);
-            byte[] cipherBytes = Arrays.copyOfRange(all, SALT_LENGTH + INITIALIZATION_VECTOR_LENGTH, all.length);
+            byte[] salt = Arrays.copyOfRange(decodedBytes, 0, SALT_LENGTH);
+            byte[] initializationVector = Arrays.copyOfRange(decodedBytes, SALT_LENGTH, SALT_LENGTH + INITIALIZATION_VECTOR_LENGTH);
+            byte[] cipherBytes = Arrays.copyOfRange(decodedBytes, SALT_LENGTH + INITIALIZATION_VECTOR_LENGTH, decodedBytes.length);
 
             final SecretKey key = deriveKey(decryptionKey.toCharArray(), salt);
 
