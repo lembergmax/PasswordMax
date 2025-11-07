@@ -1,19 +1,17 @@
 package org.mlprograms.passwordmax.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.util.List;
 
 @Getter
 @AllArgsConstructor
-@NoArgsConstructor
 public class AccountData {
 
-    private String username;
-    private String verificationHash; // Masterpasswort Hash
-    private String encryptionSaltBase64; // für AES-Schlüssel
-    private List<EntryData> entries;
+    private final String username;
+    private final String verificationHash;
+    private final String encryptionSaltBase64;
+    private final List<EntryData> entries;
 
 }

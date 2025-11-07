@@ -21,21 +21,21 @@ public class EntryData {
     private String notes;
 
     public void encrypt(final SecretKey aesKey, final byte[] additionalAuthenticationData, final Cryptographer cryptographer) throws Exception {
-        this.encryptedPassword = cryptographer.encrypt(aesKey, this.encryptedPassword, additionalAuthenticationData);
-        this.description = cryptographer.encrypt(aesKey, this.description, additionalAuthenticationData);
-        this.url = cryptographer.encrypt(aesKey, this.url, additionalAuthenticationData);
-        this.username = cryptographer.encrypt(aesKey, this.username, additionalAuthenticationData);
-        this.email = cryptographer.encrypt(aesKey, this.email, additionalAuthenticationData);
-        this.notes = cryptographer.encrypt(aesKey, this.notes, additionalAuthenticationData);
+        this.encryptedPassword = cryptographer.encrypt(this.encryptedPassword, aesKey, additionalAuthenticationData);
+        this.description = cryptographer.encrypt(this.description, aesKey, additionalAuthenticationData);
+        this.url = cryptographer.encrypt(this.url, aesKey, additionalAuthenticationData);
+        this.username = cryptographer.encrypt(this.username, aesKey, additionalAuthenticationData);
+        this.email = cryptographer.encrypt(this.email, aesKey, additionalAuthenticationData);
+        this.notes = cryptographer.encrypt(this.notes, aesKey, additionalAuthenticationData);
     }
 
     public void decrypt(final SecretKey aesKey, final byte[] additionalAuthenticationData, final Cryptographer cryptographer) throws Exception {
-        this.encryptedPassword = cryptographer.decrypt(aesKey, this.encryptedPassword, additionalAuthenticationData);
-        this.description = cryptographer.decrypt(aesKey, this.description, additionalAuthenticationData);
-        this.url = cryptographer.decrypt(aesKey, this.url, additionalAuthenticationData);
-        this.username = cryptographer.decrypt(aesKey, this.username, additionalAuthenticationData);
-        this.email = cryptographer.decrypt(aesKey, this.email, additionalAuthenticationData);
-        this.notes = cryptographer.decrypt(aesKey, this.notes, additionalAuthenticationData);
+        this.encryptedPassword = cryptographer.decrypt(this.encryptedPassword, aesKey, additionalAuthenticationData);
+        this.description = cryptographer.decrypt(this.description, aesKey, additionalAuthenticationData);
+        this.url = cryptographer.decrypt(this.url, aesKey, additionalAuthenticationData);
+        this.username = cryptographer.decrypt(this.username, aesKey, additionalAuthenticationData);
+        this.email = cryptographer.decrypt(this.email, aesKey, additionalAuthenticationData);
+        this.notes = cryptographer.decrypt(this.notes, aesKey, additionalAuthenticationData);
     }
 
 }
