@@ -1,4 +1,4 @@
-package org.mlprograms.passwordmax.util;
+package org.mlprograms.passwordmax.security;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;

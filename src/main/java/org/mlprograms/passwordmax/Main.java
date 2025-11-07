@@ -1,6 +1,6 @@
 package org.mlprograms.passwordmax;
 
-import org.mlprograms.passwordmax.util.Cryptographer;
+import org.mlprograms.passwordmax.security.Cryptographer;
 
 public class Main {
 
