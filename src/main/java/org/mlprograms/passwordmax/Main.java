@@ -12,8 +12,8 @@ public class Main {
 
         jsonController.loadDataFromJson().forEach(account -> {
             System.out.println("Konto: " + account.getName() + " (Masterpasswort: " + account.getDecryptedPassword() + ")");
-            account.getEntries().forEach(password ->
-                    System.out.println("  - Passwort: " + password  .getPassword() + " (" + password.getUsername() + ")"));
+            account.getEntries().forEach(entry ->
+                    System.out.println("  " + entry.getEntryName() + " - Passwort: " + entry.getPassword() + " (" + entry.getUsername() + ")"));
         });
     }
 
