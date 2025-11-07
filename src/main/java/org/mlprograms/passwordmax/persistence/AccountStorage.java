@@ -43,10 +43,7 @@ public final class AccountStorage {
 
     public void save(final Account account) throws IOException {
         final File file = getDefaultFile();
-        if (file.exists()) {
-            throw new IOException("Datei existiert bereits und darf nicht überschrieben werden.");
-        }
-
+        // Allow overwriting the existing file when saving updates to the account
         try (FileWriter writer = new FileWriter(file)) {
             gson.toJson(account, writer);
         }
