@@ -1,7 +1,5 @@
 package org.mlprograms.passwordmax.util;
 
-import lombok.extern.slf4j.Slf4j;
-
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -13,7 +11,6 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 
-@Slf4j
 public class Cryptographer {
 
     private final String KDF_ALGO = "PBKDF2WithHmacSHA256";
@@ -52,7 +49,8 @@ public class Cryptographer {
 
             return Base64.getEncoder().encodeToString(output);
         } catch (final Exception exception) {
-            log.error("Encryption failed", exception);
+            System.err.println("Encryption failed: " + exception.getMessage());
+            exception.printStackTrace(System.err);
             return "";
         }
     }
@@ -78,7 +76,8 @@ public class Cryptographer {
             final byte[] plainBytes = cipher.doFinal(cipherBytes);
             return new String(plainBytes, StandardCharsets.UTF_8);
         } catch (final Exception exception) {
-            log.error("Decryption failed", exception);
+            System.err.println("Decryption failed: " + exception.getMessage());
+            exception.printStackTrace(System.err);
             return "";
         }
     }
