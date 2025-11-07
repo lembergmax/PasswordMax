@@ -56,14 +56,14 @@ public class FolderController {
         return appFolder.resolve("keys");
     }
 
-    public void createUserKeyFolder(final String username) {
+    public void createUserKeyFolder(final String accountName) {
         try {
             final Path keyFolder = getKeyFolder();
             if (!Files.exists(keyFolder)) {
                 Files.createDirectories(keyFolder);
             }
         } catch (final IOException ioException) {
-            log.error("Konnte Benutzer-Key-Verzeichnis nicht anlegen: {}", username, ioException);
+            log.error("Konnte Benutzer-Key-Verzeichnis nicht anlegen: {}", accountName, ioException);
             throw new RuntimeException("Konnte Benutzer-Key-Verzeichnis nicht anlegen", ioException);
         }
     }

@@ -3,6 +3,7 @@ package org.mlprograms.passwordmax;
 import org.mlprograms.passwordmax.controller.JsonController;
 import org.mlprograms.passwordmax.model.Account;
 import org.mlprograms.passwordmax.model.Entry;
+import org.mlprograms.passwordmax.util.AesCryptographer;
 
 public class Main {
 
@@ -12,8 +13,7 @@ public class Main {
 
         jsonController.loadDataFromJson().forEach(account -> {
             System.out.println("Konto: " + account.getName() + " (Masterpasswort: " + account.getDecryptedPassword() + ")");
-            account.getEntries().forEach(password ->
-                    System.out.println("  - Passwort: " + password  .getPassword() + " (" + password.getUsername() + ")"));
+            account.getEntries().forEach(entry -> System.out.println(entry.encryptEntry(new AesCryptographer(account.getName()))));
         });
     }
 

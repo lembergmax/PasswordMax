@@ -28,4 +28,29 @@ public class Account {
         return aesCryptographer.decrypt(password, secretKey, initializationVector);
     }
 
+    public Entry getDecryptedEntryByEntryName(final String entryName) {
+        final AesCryptographer aesCryptographer = new AesCryptographer(name);
+
+        for (final Entry entry : entries) {
+            if (entry.getEntryName().equals(entryName)) {
+                return entry.decrypt(aesCryptographer);
+            }
+        }
+
+        throw new RuntimeException("Es wurde kein Eintrag mit dem Namen '" + entryName + "' gefunden.");
+
+    }
+
+    public Entry getEncryptedEntryByEntryName(final String entryName) {
+        final AesCryptographer aesCryptographer = new AesCryptographer(name);
+
+        for (final Entry entry : entries) {
+            if (entry.getEntryName().equals(entryName)) {
+                return entry.encryptEntry(aesCryptographer);
+            }
+        }
+
+        throw new RuntimeException("Es wurde kein Eintrag mit dem Namen '" + entryName + "' gefunden.");
+    }
+
 }

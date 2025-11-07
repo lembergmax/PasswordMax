@@ -87,7 +87,7 @@ public class JsonController {
             return;
         }
 
-        account.getEntries().add(entryToAdd);
+        account.getEntries().add(entryToAdd.decrypt(new AesCryptographer(accountName)));
         saveDataToJson(accounts);
         log.info("Passwort zu Konto '{}' hinzugefügt", accountName);
     }
