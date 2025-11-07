@@ -1,61 +1,80 @@
 package org.mlprograms.passwordmax;
 
+import org.mlprograms.passwordmax.model.AccountData;
+import org.mlprograms.passwordmax.model.EntryData;
+import org.mlprograms.passwordmax.persistence.AccountStorage;
 import org.mlprograms.passwordmax.security.CryptoUtils;
 import org.mlprograms.passwordmax.security.Cryptographer;
 
 import javax.crypto.SecretKey;
 import java.util.Base64;
+import java.util.List;
 
 public class Main {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         final CryptoUtils cryptoUtils = new CryptoUtils();
         final Cryptographer cryptographer = new Cryptographer();
+        final AccountStorage accountStorage = new AccountStorage();
 
-        // === Registrierung (einmalig) ===
-        char[] masterPassword = "SehrSicheresMasterPasswort#2025".toCharArray();
-        String verificationString = cryptoUtils.createVerificationHash(masterPassword);
-        // Speichere verificationString in DB: z.B. "v1:200000:BASE64(salt):BASE64(hash)"
-        System.out.println("Store verification (DB): " + verificationString);
+        final String filePath = "account.json";
 
-        // Generiere encryptionSalt (einmalig pro Benutzer) und speichere Base64 davon
-        String encryptionSaltBase64 = cryptoUtils.generateEncryptionSaltBase64();
-        System.out.println("Store encryptionSalt (DB): " + encryptionSaltBase64);
-
-        // wipe registration master variable (beispielhaft)
+        // === Registrierung: Masterpasswort einmalig ===
+        final char[] masterPassword = "SehrSicheresMasterPasswort#2025".toCharArray();
+        final String verificationHash = cryptoUtils.createVerificationHash(masterPassword);
+        final String encryptionSaltBase64 = cryptoUtils.generateEncryptionSaltBase64();
         cryptoUtils.wipe(masterPassword);
 
-        // === Login / Unlock (bei jedem Login) ===
-        char[] attempt = "SehrSicheresMasterPasswort#2025".toCharArray();
-        boolean ok = cryptoUtils.verifyPassword(attempt, verificationString);
-        System.out.println("Password OK? " + ok);
-
-        if (!ok) {
-            cryptoUtils.wipe(attempt);
+        // === Login / Schlüsselableitung ===
+        final char[] loginAttempt = "SehrSicheresMasterPasswort#2025".toCharArray();
+        if (!cryptoUtils.verifyPassword(loginAttempt, verificationHash)) {
+            System.out.println("Falsches Passwort!");
+            cryptoUtils.wipe(loginAttempt);
             return;
         }
 
-        // Schlüssel ableiten (aus attempt und stored encryptionSalt)
-        byte[] encryptionSalt = Base64.getDecoder().decode(encryptionSaltBase64);
-        SecretKey aesKey = cryptoUtils.deriveEncryptionKey(attempt, encryptionSalt);
+        final SecretKey aesKey = cryptoUtils.deriveEncryptionKey(loginAttempt, Base64.getDecoder().decode(encryptionSaltBase64));
+        cryptoUtils.wipe(loginAttempt);
 
-        // Wipe attempt asap
-        cryptoUtils.wipe(attempt);
+        final byte[] additionalAuthenticationData = "user:1234".getBytes();
 
-        // === Vault Operation: verschlüssele einen Eintrag ===
-        String secretEntry = "MeinSuperGeheimesPasswortFürBank";
-        // optional: AAD z. B. userId oder entryId als bytes (bindet Kontext an Verschlüsselung)
-        byte[] aad = "user:1234".getBytes();
+        // === Beispiel Vault-Eintrag erstellen und verschlüsseln ===
+        final EntryData vaultEntry = new EntryData(
+                "Bank",
+                "MeinSuperGeheimesPasswortFürBank",
+                "Bank-Konto",
+                "https://bank.example.com",
+                "maxuser",
+                "max@example.com",
+                "Keine Notizen"
+        );
+        vaultEntry.encrypt(aesKey, additionalAuthenticationData, cryptographer);
 
-        String cipherText = cryptographer.encrypt(aesKey, secretEntry, aad);
-        System.out.println("Encrypted vault entry (store this): " + cipherText);
+        // === AccountData erstellen ===
+        final AccountData accountData = new AccountData(
+                "max",
+                verificationHash,
+                encryptionSaltBase64,
+                List.of(vaultEntry)
+        );
 
-        // später: entschlüsseln
-        String decrypted = cryptographer.decrypt(aesKey, cipherText, aad);
-        System.out.println("Decrypted: " + decrypted);
+        // === Speichern ===
+        accountStorage.save(accountData, filePath);
+        System.out.println("Account gespeichert: " + filePath);
 
-        // Wipe key material where possible (SecretKeySpec lacks explicit wipe)
-        // Hinweis: in Java kannst du key material nicht immer sicher löschen; Platform-spezifische Maßnahmen nötig.
+        // === Laden + Entschlüsseln ===
+        final AccountData loadedAccount = accountStorage.load(filePath);
+        final SecretKey reloadedAesKey = cryptoUtils.deriveEncryptionKey(
+                "SehrSicheresMasterPasswort#2025".toCharArray(),
+                Base64.getDecoder().decode(loadedAccount.getEncryptionSaltBase64())
+        );
+
+        final EntryData decryptedEntry = loadedAccount.getEntries().getFirst();
+        decryptedEntry.decrypt(reloadedAesKey, additionalAuthenticationData, cryptographer);
+
+        System.out.println("Entschlüsseltes Passwort: " + decryptedEntry.getEncryptedPassword());
+        System.out.println("Entschlüsselte URL: " + decryptedEntry.getUrl());
+        System.out.println("Entschlüsselter Username: " + decryptedEntry.getUsername());
     }
 
 }
