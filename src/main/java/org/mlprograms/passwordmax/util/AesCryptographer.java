@@ -16,8 +16,6 @@ import java.util.Optional;
 @Slf4j
 public class AesCryptographer {
 
-    private final String SECRET_KEY_FILE = "secret.key";
-    private final String INITIALIZATION_VECTOR_KEY_FILE = "initializationVector.key";
     private final int INITIALIZATION_VECTOR_SIZE = 256;
     private final int KEY_SIZE = 256;
 
@@ -30,12 +28,10 @@ public class AesCryptographer {
     public AesCryptographer(final String username) {
         final FolderController folderController = new FolderController();
         folderController.createAppFolders();
-
         folderController.createUserKeyFolder(username);
 
-        final Path userKeyFolder = folderController.getKeyFolderForUser(username);
-        this.secretKeyPath = userKeyFolder.resolve(SECRET_KEY_FILE);
-        this.initializationVectorPath = userKeyFolder.resolve(INITIALIZATION_VECTOR_KEY_FILE);
+        this.secretKeyPath = folderController.getKeyFolder().resolve(username + ".key");
+        this.initializationVectorPath = folderController.getKeyFolder().resolve(username + ".iv");
     }
 
     private Optional<SecretKey> generateSecretKey() {

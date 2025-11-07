@@ -11,7 +11,7 @@ public class Main {
         addSampleData(jsonController);
 
         jsonController.loadDataFromJson().forEach(account -> {
-            System.out.println("Konto: " + account.getName() + " (Masterpasswort: " + account.getPassword() + ")");
+            System.out.println("Konto: " + account.getName() + " (Masterpasswort: " + account.getDecryptedPassword() + ")");
             account.getEntries().forEach(password ->
                     System.out.println("  - Passwort: " + password  .getPassword() + " (" + password.getUsername() + ")"));
         });

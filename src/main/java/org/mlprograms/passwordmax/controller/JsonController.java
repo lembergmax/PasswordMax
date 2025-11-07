@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 public class JsonController {
@@ -68,19 +69,27 @@ public class JsonController {
         log.info("Konto '{}' wurde hinzugefügt", accountToAdd.getName());
     }
 
-    public void addPasswordToAccount(final String accountName, final Entry entry) {
+    public void addPasswordToAccount(final String accountName, final Entry entryToAdd) {
         final List<Account> accounts = loadDataFromJson();
+        final Optional<Account> optionalAccount = accounts.stream().filter(acc -> acc.getName().equals(accountName)).findFirst();
 
-        for (final Account account : accounts) {
-            if (account.getName().equals(accountName)) {
-                account.getEntries().add(entry);
-                saveDataToJson(accounts);
-                log.info("Passwort zu Konto '{}' hinzugefügt", accountName);
-                return;
-            }
+        if (optionalAccount.isEmpty()) {
+            log.warn("Konto '{}' nicht gefunden – Passwort konnte nicht hinzugefügt werden", accountName);
+            return;
         }
 
-        log.warn("Konto '{}' nicht gefunden – Passwort konnte nicht hinzugefügt werden", accountName);
+        final Account account = optionalAccount.get();
+        final boolean existsEntry = account.getEntries().stream()
+                .anyMatch(entry -> entry.getEntryName().equals(entryToAdd.getEntryName()));
+
+        if (existsEntry) {
+            log.warn("Passwort-Eintrag '{}' existiert bereits in Konto '{}'", entryToAdd.getEntryName(), accountName);
+            return;
+        }
+
+        account.getEntries().add(entryToAdd);
+        saveDataToJson(accounts);
+        log.info("Passwort zu Konto '{}' hinzugefügt", accountName);
     }
 
     public List<Account> loadDataFromJson() {
