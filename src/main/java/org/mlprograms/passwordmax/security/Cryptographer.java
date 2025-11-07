@@ -50,8 +50,7 @@ public class Cryptographer {
             return Base64.getEncoder().encodeToString(output);
         } catch (final Exception exception) {
             System.err.println("Encryption failed: " + exception.getMessage());
-            exception.printStackTrace(System.err);
-            return "";
+            throw new RuntimeException("Encryption failed");
         }
     }
 
@@ -77,8 +76,7 @@ public class Cryptographer {
             return new String(plainBytes, StandardCharsets.UTF_8);
         } catch (final Exception exception) {
             System.err.println("Decryption failed: " + exception.getMessage());
-            exception.printStackTrace(System.err);
-            return "";
+            throw new RuntimeException("Decryption failed");
         }
     }
 

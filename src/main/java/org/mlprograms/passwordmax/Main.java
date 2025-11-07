@@ -9,7 +9,7 @@ public class Main {
 
         String password = "Minecraft";
 
-        System.out.println("Verschlüsselt (Base64): " + cryptographer.encrypt(password));
+        System.out.println("Verschlüsselt: " + cryptographer.encrypt(password));
         System.out.println("Entschlüsselt: " + cryptographer.decrypt(cryptographer.encrypt(password), password));
     }
 
