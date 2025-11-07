@@ -9,9 +9,9 @@ import java.util.List;
 @AllArgsConstructor
 public class Account {
 
-    private final String username;
-    private final String verificationHash;
-    private final String encryptionSaltBase64;
-    private final List<Entry> entries;
+    private String username;
+    private String verificationHash;
+    private String encryptionSaltBase64;
+    private List<Entry> entries;
 
 }

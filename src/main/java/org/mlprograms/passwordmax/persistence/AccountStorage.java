@@ -24,17 +24,21 @@ public final class AccountStorage {
 
     public File getDefaultFile() {
         final String userHome = System.getProperty(USER_HOME);
-        final File dir = new File(userHome, PASSWORDMAX_FOLDER);
-        if (!dir.exists()) {
-            dir.mkdirs();
+        final File directory = new File(userHome, PASSWORDMAX_FOLDER);
+
+        if (!directory.exists()) {
+            directory.mkdirs();
+
             if (System.getProperty(OS_NAME).toLowerCase().contains(WIN)) {
                 try {
-                    Runtime.getRuntime().exec("attrib +H \"" + dir.getAbsolutePath() + "\"");
-                } catch (IOException ignored) {
+                    Runtime.getRuntime().exec("attrib +H \"" + directory.getAbsolutePath() + "\"");
+                } catch (final IOException ioException) {
+                    System.err.println("Fehler beim Setzen des Hidden-Attributs für das Verzeichnis: " + ioException.getMessage());
                 }
             }
         }
-        return new File(dir, DATA_JSON);
+
+        return new File(directory, DATA_JSON);
     }
 
     public void save(final Account account) throws IOException {
@@ -42,6 +46,7 @@ public final class AccountStorage {
         if (file.exists()) {
             throw new IOException("Datei existiert bereits und darf nicht überschrieben werden.");
         }
+
         try (FileWriter writer = new FileWriter(file)) {
             gson.toJson(account, writer);
         }
@@ -52,8 +57,8 @@ public final class AccountStorage {
         if (!file.exists()) {
             throw new IOException("Datei existiert nicht: " + file.getAbsolutePath());
         }
-        try (FileReader reader = new FileReader(file)) {
-            return gson.fromJson(reader, Account.class);
+        try (final FileReader fileReader = new FileReader(file)) {
+            return gson.fromJson(fileReader, Account.class);
         }
     }
 

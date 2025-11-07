@@ -12,31 +12,49 @@ import java.util.List;
 
 public final class Main {
 
-    public static void main(final String[] args) throws Exception {
-        final CryptoUtils cryptoUtils = new CryptoUtils();
-        final Cryptographer cryptographer = new Cryptographer();
-        final AccountStorage accountStorage = new AccountStorage();
+    private static final CryptoUtils cryptoUtils = new CryptoUtils();
+    private static final Cryptographer cryptographer = new Cryptographer();
+    private static final AccountStorage accountStorage = new AccountStorage();
+    private static final byte[] ADDITIONAL_AUTHENTICATED_DATA = "user:1234".getBytes();
 
-        // === Registrierung ===
-        final char[] masterPassword = "SehrSicheresMasterPasswort#2025".toCharArray();
+    private Main() {
+    }
+
+    public static void main(final String[] args) throws Exception {
+        final String masterPassword = "SehrSicheresMasterPasswort#2025";
+
+        // Registrierung
+        final Account account = register(masterPassword);
+
+        // Sample Vault-Eintrag hinzufügen
+        addSampleData(account, masterPassword);
+
+        // Account speichern
+        saveAccount(account);
+
+        // Login & Entschlüsseln
+        final SecretKey aesKey = login(masterPassword, account);
+        displayVault(account, aesKey);
+    }
+
+    private static Account register(final String masterPassword) throws Exception {
         final String verificationHash = cryptoUtils.createVerificationHash(masterPassword);
         final String encryptionSaltBase64 = cryptoUtils.generateEncryptionSaltBase64();
-        cryptoUtils.wipe(masterPassword);
 
-        // === Login / Schlüsselableitung ===
-        final char[] loginAttempt = "SehrSicheresMasterPasswort#2025".toCharArray();
-        if (!cryptoUtils.verifyPassword(loginAttempt, verificationHash)) {
-            System.out.println("Falsches Passwort!");
-            cryptoUtils.wipe(loginAttempt);
-            return;
-        }
+        return new Account(
+                "max",
+                verificationHash,
+                encryptionSaltBase64,
+                List.of()
+        );
+    }
 
-        final SecretKey aesKey = cryptoUtils.deriveEncryptionKey(loginAttempt, Base64.getDecoder().decode(encryptionSaltBase64));
-        cryptoUtils.wipe(loginAttempt);
+    private static void addSampleData(final Account account, final String masterPassword) throws Exception {
+        final SecretKey aesKey = cryptoUtils.deriveEncryptionKey(
+                masterPassword,
+                Base64.getDecoder().decode(account.getEncryptionSaltBase64())
+        );
 
-        final byte[] additionalAuthenticationData = "user:1234".getBytes();
-
-        // === Vault-Eintrag erstellen & verschlüsseln ===
         final Entry vaultEntry = new Entry(
                 "Bank",
                 "MeinSuperGeheimesPasswortFürBank",
@@ -46,41 +64,40 @@ public final class Main {
                 "max@example.com",
                 "Keine Notizen"
         );
-        vaultEntry.encrypt(aesKey, additionalAuthenticationData, cryptographer);
+        vaultEntry.encrypt(aesKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
 
-        // === AccountData erstellen ===
-        final Account account = new Account(
-                "max",
-                verificationHash,
-                encryptionSaltBase64,
-                List.of(vaultEntry)
-        );
+        account.getEntries().add(vaultEntry);
+    }
 
-        // === Speichern – nur einmalig ===
+    private static void saveAccount(final Account account) {
         try {
             accountStorage.save(account);
             System.out.println("Account gespeichert: " + accountStorage.getDefaultFile().getAbsolutePath());
         } catch (final Exception e) {
             System.out.println("Speichern nicht möglich: " + e.getMessage());
         }
+    }
 
-        // === Laden + Entschlüsseln ===
-        final Account loadedAccount = accountStorage.load();
-        final SecretKey reloadedAesKey = cryptoUtils.deriveEncryptionKey(
-                "SehrSicheresMasterPasswort#2025".toCharArray(),
-                Base64.getDecoder().decode(loadedAccount.getEncryptionSaltBase64())
+    private static SecretKey login(final String masterPassword, final Account account) throws Exception {
+        if (!cryptoUtils.verifyPassword(masterPassword, account.getVerificationHash())) {
+            throw new IllegalArgumentException("Falsches Passwort!");
+        }
+
+        return cryptoUtils.deriveEncryptionKey(
+                masterPassword,
+                Base64.getDecoder().decode(account.getEncryptionSaltBase64())
         );
+    }
 
-        final Entry decryptedEntry = loadedAccount.getEntries().get(0);
-        decryptedEntry.decrypt(reloadedAesKey, additionalAuthenticationData, cryptographer);
-
-        System.out.println("Entschlüsseltes Passwort: " + decryptedEntry.getEncryptedPassword());
-        System.out.println("Entschlüsselte URL: " + decryptedEntry.getUrl());
-        System.out.println("Entschlüsselter Username: " + decryptedEntry.getUsername());
-
-        // === Datei löschen ===
-        // boolean deleted = accountStorage.delete();
-        // System.out.println("Datei gelöscht: " + deleted);
+    private static void displayVault(final Account account, final SecretKey aesKey) throws Exception {
+        for (final Entry entry : account.getEntries()) {
+            entry.decrypt(aesKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
+            System.out.println("Eintrag: " + entry.getEntryName());
+            System.out.println("  Passwort: " + entry.getEncryptedPassword());
+            System.out.println("  URL: " + entry.getUrl());
+            System.out.println("  Username: " + entry.getUsername());
+            System.out.println();
+        }
     }
 
 }
