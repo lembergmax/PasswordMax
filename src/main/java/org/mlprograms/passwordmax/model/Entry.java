@@ -10,7 +10,7 @@ import javax.crypto.SecretKey;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class EntryData {
+public class Entry {
 
     private String entryName; // bleibt im Klartext
     private String encryptedPassword;

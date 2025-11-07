@@ -13,7 +13,7 @@ public final class Cryptographer {
     private static final int INITIALIZATION_VECTOR_LENGTH = 12;
     private static final int GCM_TAG_BITS = 128;
 
-    public String encrypt(final String text, final SecretKey secretKey, final byte[] aad) throws Exception {
+    public String encrypt(final String text, final SecretKey secretKey, final byte[] additionalAuthenticatedData) throws Exception {
         if (secretKey == null || text == null) {
             throw new IllegalArgumentException("Parameters must not be null");
         }
@@ -25,8 +25,8 @@ public final class Cryptographer {
         final GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_BITS, initializationVector);
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmParameterSpec);
 
-        if (aad != null) {
-            cipher.updateAAD(aad);
+        if (additionalAuthenticatedData != null) {
+            cipher.updateAAD(additionalAuthenticatedData);
         }
 
         final byte[] cipherBytes = cipher.doFinal(text.getBytes(StandardCharsets.UTF_8));
@@ -43,16 +43,16 @@ public final class Cryptographer {
             throw new IllegalArgumentException("Parameters must not be null");
         }
 
-        final byte[] all = Base64.getDecoder().decode(base64Input);
-        if (all.length < INITIALIZATION_VECTOR_LENGTH) {
+        final byte[] encryptedPayload = Base64.getDecoder().decode(base64Input);
+        if (encryptedPayload.length < INITIALIZATION_VECTOR_LENGTH) {
             throw new IllegalArgumentException("Input too short");
         }
 
         final byte[] initializationVector = new byte[INITIALIZATION_VECTOR_LENGTH];
-        System.arraycopy(all, 0, initializationVector, 0, INITIALIZATION_VECTOR_LENGTH);
+        System.arraycopy(encryptedPayload, 0, initializationVector, 0, INITIALIZATION_VECTOR_LENGTH);
 
-        final byte[] cipherBytes = new byte[all.length - INITIALIZATION_VECTOR_LENGTH];
-        System.arraycopy(all, INITIALIZATION_VECTOR_LENGTH, cipherBytes, 0, cipherBytes.length);
+        final byte[] cipherBytes = new byte[encryptedPayload.length - INITIALIZATION_VECTOR_LENGTH];
+        System.arraycopy(encryptedPayload, INITIALIZATION_VECTOR_LENGTH, cipherBytes, 0, cipherBytes.length);
 
         final Cipher cipher = Cipher.getInstance(CIPHER);
         final GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_BITS, initializationVector);

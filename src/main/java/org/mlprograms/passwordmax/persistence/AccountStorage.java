@@ -2,7 +2,7 @@ package org.mlprograms.passwordmax.persistence;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.mlprograms.passwordmax.model.AccountData;
+import org.mlprograms.passwordmax.model.Account;
 
 import java.io.File;
 import java.io.FileReader;
@@ -37,23 +37,23 @@ public final class AccountStorage {
         return new File(dir, DATA_JSON);
     }
 
-    public void save(final AccountData accountData) throws IOException {
+    public void save(final Account account) throws IOException {
         final File file = getDefaultFile();
         if (file.exists()) {
             throw new IOException("Datei existiert bereits und darf nicht überschrieben werden.");
         }
         try (FileWriter writer = new FileWriter(file)) {
-            gson.toJson(accountData, writer);
+            gson.toJson(account, writer);
         }
     }
 
-    public AccountData load() throws IOException {
+    public Account load() throws IOException {
         final File file = getDefaultFile();
         if (!file.exists()) {
             throw new IOException("Datei existiert nicht: " + file.getAbsolutePath());
         }
         try (FileReader reader = new FileReader(file)) {
-            return gson.fromJson(reader, AccountData.class);
+            return gson.fromJson(reader, Account.class);
         }
     }
 

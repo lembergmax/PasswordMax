@@ -1,7 +1,7 @@
 package org.mlprograms.passwordmax;
 
-import org.mlprograms.passwordmax.model.AccountData;
-import org.mlprograms.passwordmax.model.EntryData;
+import org.mlprograms.passwordmax.model.Account;
+import org.mlprograms.passwordmax.model.Entry;
 import org.mlprograms.passwordmax.persistence.AccountStorage;
 import org.mlprograms.passwordmax.security.CryptoUtils;
 import org.mlprograms.passwordmax.security.Cryptographer;
@@ -37,7 +37,7 @@ public final class Main {
         final byte[] additionalAuthenticationData = "user:1234".getBytes();
 
         // === Vault-Eintrag erstellen & verschlüsseln ===
-        final EntryData vaultEntry = new EntryData(
+        final Entry vaultEntry = new Entry(
                 "Bank",
                 "MeinSuperGeheimesPasswortFürBank",
                 "Bank-Konto",
@@ -49,7 +49,7 @@ public final class Main {
         vaultEntry.encrypt(aesKey, additionalAuthenticationData, cryptographer);
 
         // === AccountData erstellen ===
-        final AccountData accountData = new AccountData(
+        final Account account = new Account(
                 "max",
                 verificationHash,
                 encryptionSaltBase64,
@@ -58,20 +58,20 @@ public final class Main {
 
         // === Speichern – nur einmalig ===
         try {
-            accountStorage.save(accountData);
+            accountStorage.save(account);
             System.out.println("Account gespeichert: " + accountStorage.getDefaultFile().getAbsolutePath());
         } catch (final Exception e) {
             System.out.println("Speichern nicht möglich: " + e.getMessage());
         }
 
         // === Laden + Entschlüsseln ===
-        final AccountData loadedAccount = accountStorage.load();
+        final Account loadedAccount = accountStorage.load();
         final SecretKey reloadedAesKey = cryptoUtils.deriveEncryptionKey(
                 "SehrSicheresMasterPasswort#2025".toCharArray(),
                 Base64.getDecoder().decode(loadedAccount.getEncryptionSaltBase64())
         );
 
-        final EntryData decryptedEntry = loadedAccount.getEntries().get(0);
+        final Entry decryptedEntry = loadedAccount.getEntries().get(0);
         decryptedEntry.decrypt(reloadedAesKey, additionalAuthenticationData, cryptographer);
 
         System.out.println("Entschlüsseltes Passwort: " + decryptedEntry.getEncryptedPassword());
