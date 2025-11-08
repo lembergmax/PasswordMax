@@ -508,6 +508,14 @@ public class PasswordMaxUI {
             return;
         }
         final String name = listModel.get(idx);
+        if (account == null || account.getEntries() == null) {
+            // No entries in memory — clear and return
+            clearFields();
+            originalSelectedEntryName = null;
+            setDirty(false);
+            detailsPanel.setVisible(false);
+            return;
+        }
         final Entry entry = account.getEntries().stream()
                 .filter(e -> e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(name))
                 .findFirst().orElse(null);
@@ -704,12 +712,12 @@ public class PasswordMaxUI {
     }
 
     private void refreshList() {
+        listModel.clear();
+        if (account == null || account.getEntries() == null) return;
         final List<String> names = account.getEntries().stream()
                 .map(Entry::getEntryName)
                 .filter(n -> n != null)
                 .collect(Collectors.toList());
-
-        listModel.clear();
         names.forEach(listModel::addElement);
     }
 

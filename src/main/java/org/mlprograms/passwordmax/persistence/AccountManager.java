@@ -35,18 +35,26 @@ public class AccountManager {
         if (account == null) throw new IllegalArgumentException("Account is null");
 
         // if entries present, serialize and encrypt
-        if (account.getEntries() != null) {
-            final String json = gson.toJson(account.getEntries());
+        List<Entry> original = account.getEntries();
+        if (original != null) {
+            final String json = gson.toJson(original);
             final byte[] saltBytes = Base64.getDecoder().decode(account.getEncryptionSaltBase64());
             final SecretKey key = cryptoUtils.deriveEncryptionKey(masterPassword, saltBytes);
             final Cryptographer cryptographer = new Cryptographer();
             final String encrypted = cryptographer.encrypt(json, key, ADDITIONAL_AUTHENTICATED_DATA);
             account.setEncryptedEntries(encrypted);
-            account.setEntries(null); // clear plaintext before saving
+            // temporarily clear plaintext for storage
+            account.setEntries(null);
+            try {
+                getStorage().save(account);
+            } finally {
+                // restore in-memory entries
+                account.setEntries(original);
+            }
+        } else {
+            // nothing to encrypt, just persist
+            getStorage().save(account);
         }
-
-        // persist
-        getStorage().save(account);
     }
 
     // Decrypt the encryptedEntries blob and populate account.entries
@@ -111,6 +119,10 @@ public class AccountManager {
             return;
         }
 
+        if (account.getEntries() == null) {
+            account.setEntries(new ArrayList<>());
+        }
+
         final boolean exists = account.getEntries().stream()
                 .anyMatch(e -> e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(entry.getEntryName()));
         if (exists) {
@@ -135,6 +147,10 @@ public class AccountManager {
             return;
         }
 
+        if (account.getEntries() == null) {
+            account.setEntries(new ArrayList<>());
+        }
+
         int added = 0;
         int skipped = 0;
         for (final Entry entry : entries) {
@@ -154,6 +170,7 @@ public class AccountManager {
 
     public boolean removeEntry(final Account account, final String entryName) {
         if (entryName == null) return false;
+        if (account.getEntries() == null) return false;
         final int idx = findEntryIndex(account, entryName);
         if (idx >= 0) {
             account.getEntries().remove(idx);
@@ -163,6 +180,7 @@ public class AccountManager {
     }
 
     private int findEntryIndex(final Account account, final String entryName) {
+        if (account.getEntries() == null) return -1;
         for (int i = 0; i < account.getEntries().size(); i++) {
             final Entry e = account.getEntries().get(i);
             if (e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(entryName)) {
