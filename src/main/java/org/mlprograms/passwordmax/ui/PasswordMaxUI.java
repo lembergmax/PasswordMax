@@ -154,6 +154,10 @@ public class PasswordMaxUI {
                 this.masterPassword = pw;
                 this.secretKey = cryptoUtils.deriveEncryptionKey(masterPassword, Base64.getDecoder().decode(account.getEncryptionSaltBase64()));
 
+                // Clear credentials from the login fields for security
+                usernameLogin.setText("");
+                masterPw.setText("");
+
                 switchToVault();
 
             } catch (final Exception ex) {
@@ -244,12 +248,15 @@ public class PasswordMaxUI {
             try {
                 final Account created = accountManager.createAccount(user, pw);
                 accountManager.saveAccount(created);
-                this.account = created;
-                this.masterPassword = pw;
-                this.secretKey = cryptoUtils.deriveEncryptionKey(masterPassword, Base64.getDecoder().decode(account.getEncryptionSaltBase64()));
 
-                JOptionPane.showMessageDialog(frame, "Account erstellt.", "Info", JOptionPane.INFORMATION_MESSAGE);
-                switchToVault();
+                // Inform the user and redirect to login so they can sign in with the new account
+                JOptionPane.showMessageDialog(frame, "Account erstellt. Bitte melde dich nun an.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                // clear registration fields
+                usernameReg.setText("");
+                pwReg.setText("");
+                pwRegConfirm.setText("");
+                final CardLayout cl = (CardLayout) (cards.getLayout());
+                cl.show(cards, CARD_LOGIN);
             } catch (final Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Fehler beim Erstellen/Speichern des Accounts: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
             }
