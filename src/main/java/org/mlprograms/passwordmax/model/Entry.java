@@ -14,7 +14,8 @@ import javax.crypto.SecretKey;
 @ToString
 public class Entry {
 
-    private String entryName; // bleibt im Klartext
+    private String entryName; // plaintext (will also support encrypted storage)
+    private String encryptedEntryName; // when entryName is stored encrypted
     private String encryptedPassword;
     private String description;
     private String url;
@@ -23,6 +24,10 @@ public class Entry {
     private String notes;
 
     public void encrypt(final SecretKey aesKey, final byte[] additionalAuthenticationData, final Cryptographer cryptographer) throws Exception {
+        if (this.entryName != null) {
+            this.encryptedEntryName = cryptographer.encrypt(this.entryName, aesKey, additionalAuthenticationData);
+            this.entryName = null; // clear plaintext
+        }
         if (this.encryptedPassword != null) {
             this.encryptedPassword = cryptographer.encrypt(this.encryptedPassword, aesKey, additionalAuthenticationData);
         }
@@ -44,6 +49,9 @@ public class Entry {
     }
 
     public void decrypt(final SecretKey aesKey, final byte[] additionalAuthenticationData, final Cryptographer cryptographer) throws Exception {
+        if (this.encryptedEntryName != null) {
+            this.entryName = cryptographer.decrypt(this.encryptedEntryName, aesKey, additionalAuthenticationData);
+        }
         if (this.encryptedPassword != null) {
             this.encryptedPassword = cryptographer.decrypt(this.encryptedPassword, aesKey, additionalAuthenticationData);
         }

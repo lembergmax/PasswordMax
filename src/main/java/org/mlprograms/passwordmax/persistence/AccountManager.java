@@ -5,9 +5,13 @@ import org.mlprograms.passwordmax.model.Entry;
 import org.mlprograms.passwordmax.security.CryptoUtils;
 import org.mlprograms.passwordmax.security.Cryptographer;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import javax.crypto.SecretKey;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -17,6 +21,7 @@ public class AccountManager {
     private final CryptoUtils cryptoUtils = new CryptoUtils();
     private final byte[] ADDITIONAL_AUTHENTICATED_DATA = "user:1234".getBytes();
     private AccountStorage storage;
+    private final Gson gson = new Gson();
 
     private AccountStorage getStorage() {
         if (this.storage == null) {
@@ -25,11 +30,50 @@ public class AccountManager {
         return this.storage;
     }
 
+    // Encrypt the whole entries list and save into account.encryptedEntries, then persist the account
+    public void saveAccountEncrypted(final Account account, final String masterPassword) throws Exception {
+        if (account == null) throw new IllegalArgumentException("Account is null");
+
+        // if entries present, serialize and encrypt
+        if (account.getEntries() != null) {
+            final String json = gson.toJson(account.getEntries());
+            final byte[] saltBytes = Base64.getDecoder().decode(account.getEncryptionSaltBase64());
+            final SecretKey key = cryptoUtils.deriveEncryptionKey(masterPassword, saltBytes);
+            final Cryptographer cryptographer = new Cryptographer();
+            final String encrypted = cryptographer.encrypt(json, key, ADDITIONAL_AUTHENTICATED_DATA);
+            account.setEncryptedEntries(encrypted);
+            account.setEntries(null); // clear plaintext before saving
+        }
+
+        // persist
+        getStorage().save(account);
+    }
+
+    // Decrypt the encryptedEntries blob and populate account.entries
+    public void decryptEntries(final Account account, final String masterPassword) throws Exception {
+        if (account == null) throw new IllegalArgumentException("Account is null");
+        // If there is no encryptedEntries blob, assume entries are stored in plaintext already.
+        if (account.getEncryptedEntries() == null) {
+            if (account.getEntries() == null) {
+                account.setEntries(new ArrayList<>());
+            }
+            return;
+        }
+
+        final byte[] saltBytes = Base64.getDecoder().decode(account.getEncryptionSaltBase64());
+        final SecretKey key = cryptoUtils.deriveEncryptionKey(masterPassword, saltBytes);
+        final Cryptographer cryptographer = new Cryptographer();
+        final String json = cryptographer.decrypt(account.getEncryptedEntries(), key, ADDITIONAL_AUTHENTICATED_DATA);
+        final Type listType = new TypeToken<List<Entry>>() {}.getType();
+        final List<Entry> list = gson.fromJson(json, listType);
+        account.setEntries(list != null ? list : new ArrayList<>());
+    }
+
     public Account createAccount(final String username, final String masterPassword) throws Exception {
         final String verificationHash = cryptoUtils.createVerificationHash(masterPassword);
         final String encryptionSaltBase64 = cryptoUtils.generateEncryptionSaltBase64();
 
-        return new Account(username, verificationHash, encryptionSaltBase64, new ArrayList<>());
+        return new Account(username, verificationHash, encryptionSaltBase64, new ArrayList<>(), null);
     }
 
     public Account loadAccount() throws Exception {
@@ -75,35 +119,7 @@ public class AccountManager {
         }
 
         try {
-            // Falls für den Account noch kein Salt gesetzt ist (z.B. aus älterer Version), legen wir eines an
-            if (account.getEncryptionSaltBase64() == null) {
-                final String salt = cryptoUtils.generateEncryptionSaltBase64();
-                // Account hat keine Setter (Lombok Getter/AllArgsConstructor). Wir ersetzen die Liste durch eine neue Account-Instanz.
-                // Um Rückwärtskompatibilität zu erhalten, modifizieren wir die interne Liste falls möglich.
-                // Hier nehmen wir an, dass Account-Felder nicht final sind; wir erstellen eine neue Account und kopieren die Einträge.
-                final Account replaced = new Account(account.getUsername(), account.getVerificationHash(), salt, account.getEntries());
-                // replace reference by copying fields via reflection would be overkill; instead, if caller keeps reference, we update its fields by copying values
-                // but since Account has only getters, we cannot mutate. To keep it simple, throw informative exception so caller can recreate account.
-                System.err.println("Account enthält kein Verschlüsselungs-Salt. Bitte Account neu erzeugen oder aus Datei neu laden.");
-                // proceed with salt local for encryption to avoid NPE
-            }
-
-            if (masterPassword == null) {
-                System.err.println("Master-Passwort ist null. Eintrag wird nicht hinzugefügt.");
-                return;
-            }
-
-            final byte[] saltBytes = account.getEncryptionSaltBase64() != null
-                    ? Base64.getDecoder().decode(account.getEncryptionSaltBase64())
-                    : Base64.getDecoder().decode(cryptoUtils.generateEncryptionSaltBase64());
-
-            final SecretKey secretKey = cryptoUtils.deriveEncryptionKey(
-                    masterPassword,
-                    saltBytes
-            );
-
-            final Cryptographer cryptographer = new Cryptographer();
-            entry.encrypt(secretKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
+            // Store entry as plain in-memory; full-list encryption happens on saveAccountEncrypted
             account.getEntries().add(entry);
             System.out.println("Eintrag hinzugefügt: " + entry.getEntryName());
 
@@ -177,29 +193,14 @@ public class AccountManager {
             }
         }
 
-        try {
-            final SecretKey secretKey = cryptoUtils.deriveEncryptionKey(
-                    masterPassword,
-                    Base64.getDecoder().decode(account.getEncryptionSaltBase64())
-            );
-
-            final Cryptographer cryptographer = new Cryptographer();
-
-            // Update fields
-            existing.setEntryName(updatedEntry.getEntryName());
-            existing.setEncryptedPassword(updatedEntry.getEncryptedPassword());
-            existing.setDescription(updatedEntry.getDescription());
-            existing.setUrl(updatedEntry.getUrl());
-            existing.setUsername(updatedEntry.getUsername());
-            existing.setEmail(updatedEntry.getEmail());
-            existing.setNotes(updatedEntry.getNotes());
-
-            // Re-encrypt all sensitive fields
-            existing.encrypt(secretKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
-        } catch (final Exception exception) {
-            System.err.println("Fehler beim Aktualisieren des Eintrags: " + exception.getMessage());
-            throw new RuntimeException(exception);
-        }
+        // Update fields in-memory; encryption is handled at save time via saveAccountEncrypted
+        existing.setEntryName(updatedEntry.getEntryName());
+        existing.setEncryptedPassword(updatedEntry.getEncryptedPassword());
+        existing.setDescription(updatedEntry.getDescription());
+        existing.setUrl(updatedEntry.getUrl());
+        existing.setUsername(updatedEntry.getUsername());
+        existing.setEmail(updatedEntry.getEmail());
+        existing.setNotes(updatedEntry.getNotes());
     }
 
 }

@@ -155,6 +155,14 @@ public class PasswordMaxUI {
                 this.masterPassword = pw;
                 this.secretKey = cryptoUtils.deriveEncryptionKey(masterPassword, Base64.getDecoder().decode(account.getEncryptionSaltBase64()));
 
+                // Decrypt full entries list into memory
+                try {
+                    accountManager.decryptEntries(this.account, this.masterPassword);
+                } catch (final Exception dex) {
+                    JOptionPane.showMessageDialog(frame, "Fehler beim Entschlüsseln der Einträge: " + dex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
                 // Clear credentials from the login fields for security
                 usernameLogin.setText("");
                 masterPw.setText("");
@@ -511,9 +519,10 @@ public class PasswordMaxUI {
         }
 
         try {
-            // clone to avoid mutating stored encrypted content
+            // clone to avoid mutating stored content
             final Entry clone = new Entry(
                     entry.getEntryName(),
+                    entry.getEncryptedEntryName(),
                     entry.getEncryptedPassword(),
                     entry.getDescription(),
                     entry.getUrl(),
@@ -521,7 +530,6 @@ public class PasswordMaxUI {
                     entry.getEmail(),
                     entry.getNotes()
             );
-            clone.decrypt(secretKey, "user:1234".getBytes(), cryptographer);
 
             // suppress dirty while filling fields programmatically
             suppressDirty = true;
@@ -580,6 +588,7 @@ public class PasswordMaxUI {
 
         final Entry entry = new Entry(
                 name,
+                null,
                 new String(passwordField.getPassword()),
                 descriptionArea.getText(),
                 urlField.getText(),
@@ -593,7 +602,7 @@ public class PasswordMaxUI {
         clearFields();
         setDirty(false);
         try {
-            accountManager.saveAccount(account);
+            accountManager.saveAccountEncrypted(account, masterPassword);
         } catch (final Exception ex) {
             JOptionPane.showMessageDialog(frame, "Fehler beim Speichern nach Hinzufügen: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
         }
@@ -617,17 +626,17 @@ public class PasswordMaxUI {
         final boolean removed = accountManager.removeEntry(account, targetName);
         if (removed) {
             try {
-                accountManager.saveAccount(account);
+                accountManager.saveAccountEncrypted(account, masterPassword);
             } catch (final Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Eintrag entfernt, aber Speichern fehlgeschlagen: " + ex.getMessage(), "Warnung", JOptionPane.WARNING_MESSAGE);
             }
-            refreshList();
-            clearFields();
-            setDirty(false);
-        } else {
-            JOptionPane.showMessageDialog(frame, "Eintrag nicht gefunden oder konnte nicht entfernt werden.", "Info", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
+             refreshList();
+             clearFields();
+             setDirty(false);
+         } else {
+             JOptionPane.showMessageDialog(frame, "Eintrag nicht gefunden oder konnte nicht entfernt werden.", "Info", JOptionPane.INFORMATION_MESSAGE);
+         }
+     }
 
     private void onDiscardChanges() {
         // reload original entry values into fields
@@ -669,6 +678,7 @@ public class PasswordMaxUI {
 
             final Entry updated = new Entry(
                     name,
+                    null,
                     new String(passwordField.getPassword()),
                     descriptionArea.getText(),
                     urlField.getText(),
@@ -683,7 +693,7 @@ public class PasswordMaxUI {
                 accountManager.addEntry(account, masterPassword, updated);
             }
 
-            accountManager.saveAccount(account);
+            accountManager.saveAccountEncrypted(account, masterPassword);
             refreshList();
             setDirty(false);
             JOptionPane.showMessageDialog(frame, "Änderungen gespeichert.", "Info", JOptionPane.INFORMATION_MESSAGE);
