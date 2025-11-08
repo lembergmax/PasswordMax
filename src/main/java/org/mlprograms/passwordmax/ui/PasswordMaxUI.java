@@ -27,6 +27,7 @@ public class PasswordMaxUI {
     private JFrame frame;
     private JPanel cards; // CardLayout root
     private static final String CARD_LOGIN = "login";
+    private static final String CARD_REGISTER = "register";
     private static final String CARD_VAULT = "vault";
 
     private JList<String> entryList;
@@ -69,12 +70,13 @@ public class PasswordMaxUI {
         cards.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         cards.add(buildLoginPanel(), CARD_LOGIN);
+        cards.add(buildRegisterPanel(), CARD_REGISTER);
         cards.add(buildVaultPanel(), CARD_VAULT);
 
         frame.setContentPane(cards);
     }
 
-    // Build login/create panel
+    // Build login panel only (separate from registration)
     private JPanel buildLoginPanel() {
         final JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY, 1), new EmptyBorder(12, 12, 12, 12)));
@@ -93,7 +95,7 @@ public class PasswordMaxUI {
         gbc.gridwidth = 2;
         panel.add(title, gbc);
 
-        final JLabel subtitle = new JLabel("Anmelden oder neuen Account erstellen", SwingConstants.CENTER);
+        final JLabel subtitle = new JLabel("Bitte anmelden", SwingConstants.CENTER);
         subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 12f));
         gbc.gridy = row++;
         panel.add(subtitle, gbc);
@@ -102,7 +104,6 @@ public class PasswordMaxUI {
 
         final JTextField usernameLogin = new JTextField();
         final JPasswordField masterPw = new JPasswordField();
-        final JPasswordField masterPwConfirm = new JPasswordField();
 
         gbc.gridy = row;
         gbc.gridx = 0;
@@ -118,25 +119,11 @@ public class PasswordMaxUI {
         panel.add(masterPw, gbc);
         row++;
 
-        gbc.gridy = row;
-        gbc.gridx = 0;
-        panel.add(new JLabel("Passwort wiederholen (bei Erstellung):"), gbc);
-        gbc.gridx = 1;
-        panel.add(masterPwConfirm, gbc);
-        row++;
-
-        final JLabel hint = new JLabel("Hinweis: Das Master-Passwort wird nicht aufbewahrt. Merke es dir gut.");
-        hint.setFont(hint.getFont().deriveFont(Font.ITALIC, 11f));
-        gbc.gridy = row++;
-        gbc.gridwidth = 2;
-        panel.add(hint, gbc);
-        gbc.gridwidth = 1;
-
         final JButton loginBtn = new JButton("Anmelden");
-        final JButton createBtn = new JButton("Account erstellen");
+        final JButton toRegisterBtn = new JButton("Neuen Account erstellen");
 
-        loginBtn.setToolTipText("Mit vorhandener Account-Datei anmelden");
-        createBtn.setToolTipText("Neuen Account erstellen und lokal speichern");
+        loginBtn.setToolTipText("Mit vorhandenem Account anmelden");
+        toRegisterBtn.setToolTipText("Zur Registrierung wechseln");
 
         loginBtn.addActionListener(e -> {
             final String user = usernameLogin.getText().trim();
@@ -169,10 +156,74 @@ public class PasswordMaxUI {
             }
         });
 
+        toRegisterBtn.addActionListener(e -> {
+            final CardLayout cl = (CardLayout) (cards.getLayout());
+            cl.show(cards, CARD_REGISTER);
+        });
+
+        final JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btns.add(toRegisterBtn);
+        btns.add(loginBtn);
+
+        gbc.gridy = row++;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        panel.add(btns, gbc);
+
+        return panel;
+    }
+
+    // New: separate registration panel
+    private JPanel buildRegisterPanel() {
+        final JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY, 1), new EmptyBorder(12, 12, 12, 12)));
+        final GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        int row = 0;
+
+        final JLabel title = new JLabel("Account erstellen");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
+        gbc.gridy = row++;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        panel.add(title, gbc);
+
+        gbc.gridwidth = 1;
+        final JTextField usernameReg = new JTextField();
+        final JPasswordField pwReg = new JPasswordField();
+        final JPasswordField pwRegConfirm = new JPasswordField();
+
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        panel.add(new JLabel("Benutzername:"), gbc);
+        gbc.gridx = 1;
+        panel.add(usernameReg, gbc);
+        row++;
+
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        panel.add(new JLabel("Master-Passwort:"), gbc);
+        gbc.gridx = 1;
+        panel.add(pwReg, gbc);
+        row++;
+
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        panel.add(new JLabel("Passwort wiederholen:"), gbc);
+        gbc.gridx = 1;
+        panel.add(pwRegConfirm, gbc);
+        row++;
+
+        final JButton createBtn = new JButton("Account erstellen");
+        final JButton cancelBtn = new JButton("Zurück zur Anmeldung");
+
         createBtn.addActionListener(e -> {
-            final String user = usernameLogin.getText().trim();
-            final String pw = new String(masterPw.getPassword());
-            final String pw2 = new String(masterPwConfirm.getPassword());
+            final String user = usernameReg.getText().trim();
+            final String pw = new String(pwReg.getPassword());
+            final String pw2 = new String(pwRegConfirm.getPassword());
             if (user.isEmpty() || pw.isEmpty() || pw2.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Alle Felder müssen ausgefüllt sein.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -192,12 +243,17 @@ public class PasswordMaxUI {
                 JOptionPane.showMessageDialog(frame, "Account erstellt.", "Info", JOptionPane.INFORMATION_MESSAGE);
                 switchToVault();
             } catch (final Exception ex) {
-                JOptionPane.showMessageDialog(frame, "Fehler beim Erstellen/ Speichern des Accounts: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Fehler beim Erstellen/Speichern des Accounts: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
             }
         });
 
+        cancelBtn.addActionListener(e -> {
+            final CardLayout cl = (CardLayout) (cards.getLayout());
+            cl.show(cards, CARD_LOGIN);
+        });
+
         final JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btns.add(loginBtn);
+        btns.add(cancelBtn);
         btns.add(createBtn);
 
         gbc.gridy = row++;
