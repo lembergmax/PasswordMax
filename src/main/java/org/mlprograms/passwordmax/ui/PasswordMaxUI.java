@@ -13,15 +13,20 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class PasswordMaxUI {
 
     private final AccountManager accountManager;
     private Account account;
-    private final String masterPassword;
+    private String masterPassword;
 
     private JFrame frame;
+    private JPanel cards;
+    private static final String CARD_LOGIN = "login";
+    private static final String CARD_VAULT = "vault";
+
     private JList<String> entryList;
     private DefaultListModel<String> listModel;
 
@@ -37,16 +42,11 @@ public class PasswordMaxUI {
     private final Cryptographer cryptographer = new Cryptographer();
     private SecretKey secretKey;
 
-    public PasswordMaxUI(final AccountManager accountManager, final Account account, final String masterPassword) throws Exception {
+    public PasswordMaxUI(final AccountManager accountManager) {
         this.accountManager = accountManager;
-        this.account = account;
-        this.masterPassword = masterPassword;
-
-        // Berechne SecretKey
-        this.secretKey = cryptoUtils.deriveEncryptionKey(masterPassword, Base64.getDecoder().decode(account.getEncryptionSaltBase64()));
 
         initUI();
-        refreshList();
+        // show login by default
     }
 
     private void initUI() {
@@ -55,8 +55,122 @@ public class PasswordMaxUI {
         frame.setSize(900, 600);
         frame.setLocationRelativeTo(null);
 
+        cards = new JPanel(new CardLayout());
+        cards.setBorder(new EmptyBorder(12, 12, 12, 12));
+
+        cards.add(buildLoginPanel(), CARD_LOGIN);
+        cards.add(buildVaultPanel(), CARD_VAULT);
+
+        frame.setContentPane(cards);
+    }
+
+    // Build login/create panel
+    private JPanel buildLoginPanel() {
+        final JPanel panel = new JPanel(new GridBagLayout());
+        final GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        int row = 0;
+
+        final JLabel title = new JLabel("PasswordMax");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
+        gbc.gridy = row++;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        panel.add(title, gbc);
+
+        gbc.gridwidth = 1;
+
+        final JTextField usernameLogin = new JTextField();
+        final JPasswordField masterPw = new JPasswordField();
+
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        panel.add(new JLabel("Benutzername:"), gbc);
+        gbc.gridx = 1;
+        panel.add(usernameLogin, gbc);
+        row++;
+
+        gbc.gridy = row;
+        gbc.gridx = 0;
+        panel.add(new JLabel("Master-Passwort:"), gbc);
+        gbc.gridx = 1;
+        panel.add(masterPw, gbc);
+        row++;
+
+        final JButton loginBtn = new JButton("Anmelden");
+        final JButton createBtn = new JButton("Account erstellen");
+
+        loginBtn.addActionListener(e -> {
+            final String user = usernameLogin.getText().trim();
+            final String pw = new String(masterPw.getPassword());
+            if (user.isEmpty() || pw.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Benutzername und Passwort dürfen nicht leer sein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                final Account loaded = accountManager.loadAccount();
+                if (!user.equalsIgnoreCase(loaded.getUsername())) {
+                    JOptionPane.showMessageDialog(frame, "Kein Account mit diesem Benutzernamen gefunden.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                if (!cryptoUtils.verifyPassword(pw, loaded.getVerificationHash())) {
+                    JOptionPane.showMessageDialog(frame, "Falsches Passwort.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                this.account = loaded;
+                this.masterPassword = pw;
+                this.secretKey = cryptoUtils.deriveEncryptionKey(masterPassword, Base64.getDecoder().decode(account.getEncryptionSaltBase64()));
+
+                switchToVault();
+
+            } catch (final Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Fehler beim Laden/Verifizieren des Accounts: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        createBtn.addActionListener(e -> {
+            final String user = usernameLogin.getText().trim();
+            final String pw = new String(masterPw.getPassword());
+            if (user.isEmpty() || pw.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Benutzername und Passwort dürfen nicht leer sein.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                final Account created = accountManager.createAccount(user, pw);
+                accountManager.saveAccount(created);
+                this.account = created;
+                this.masterPassword = pw;
+                this.secretKey = cryptoUtils.deriveEncryptionKey(masterPassword, Base64.getDecoder().decode(account.getEncryptionSaltBase64()));
+
+                JOptionPane.showMessageDialog(frame, "Account erstellt.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                switchToVault();
+            } catch (final Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Fehler beim Erstellen/ Speichern des Accounts: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        final JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btns.add(loginBtn);
+        btns.add(createBtn);
+
+        gbc.gridy = row++;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        panel.add(btns, gbc);
+
+        return panel;
+    }
+
+    // Build the existing vault UI as a panel (slightly refactored from previous code)
+    private JPanel buildVaultPanel() {
         final JPanel root = new JPanel(new BorderLayout(12, 12));
-        root.setBorder(new EmptyBorder(12, 12, 12, 12));
 
         // Left: List
         listModel = new DefaultListModel<>();
@@ -118,7 +232,14 @@ public class PasswordMaxUI {
 
         root.add(buttons, BorderLayout.SOUTH);
 
-        frame.setContentPane(root);
+        return root;
+    }
+
+    private void switchToVault() {
+        // refresh list and show vault card
+        refreshList();
+        final CardLayout cl = (CardLayout) (cards.getLayout());
+        cl.show(cards, CARD_VAULT);
     }
 
     private JPanel wrapWithTitled(final String title, final Component comp) {
@@ -264,8 +385,8 @@ public class PasswordMaxUI {
     private void refreshList() {
         final List<String> names = account.getEntries().stream()
                 .map(Entry::getEntryName)
-                .filter(n -> n != null)
-                .collect(Collectors.toList());
+                .filter(Objects::nonNull)
+                .toList();
 
         listModel.clear();
         names.forEach(listModel::addElement);

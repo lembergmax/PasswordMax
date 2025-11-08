@@ -29,16 +29,12 @@ public class AccountManager {
         final String verificationHash = cryptoUtils.createVerificationHash(masterPassword);
         final String encryptionSaltBase64 = cryptoUtils.generateEncryptionSaltBase64();
 
-        final Account account = new Account(username, verificationHash, encryptionSaltBase64, new ArrayList<>());
-        System.out.println("Account erstellt: " + username);
-        return account;
+        return new Account(username, verificationHash, encryptionSaltBase64, new ArrayList<>());
     }
 
     public Account loadAccount() throws Exception {
         try {
-            final Account account = getStorage().load();
-            System.out.println("Account geladen: " + account.getUsername());
-            return account;
+            return getStorage().load();
         } catch (final Exception exception) {
             System.err.println("Fehler beim Laden des Accounts: " + exception.getMessage());
             throw exception;
@@ -48,7 +44,6 @@ public class AccountManager {
     public void saveAccount(final Account account) throws Exception {
         try {
             getStorage().save(account);
-            System.out.println("Account gespeichert: " + getStorage().getDefaultFile().getAbsolutePath());
         } catch (final Exception exception) {
             System.err.println("Fehler beim Speichern des Accounts: " + exception.getMessage());
             throw exception;
@@ -61,7 +56,6 @@ public class AccountManager {
             if (!file.delete()) {
                 throw new IOException("Datei konnte nicht gelöscht werden: " + file.getAbsolutePath());
             }
-            System.out.println("Account-Datei gelöscht: " + file.getAbsolutePath());
         } else {
             System.out.println("Keine Account-Datei vorhanden zum Löschen: " + file.getAbsolutePath());
         }
@@ -150,9 +144,6 @@ public class AccountManager {
 
         if (toRemove != null) {
             account.getEntries().remove(toRemove);
-            System.out.println("Eintrag entfernt: " + entryName);
-        } else {
-            System.out.println("Eintrag nicht gefunden: " + entryName);
         }
     }
 
@@ -182,8 +173,6 @@ public class AccountManager {
             existing.setNotes(updatedEntry.getNotes());
 
             existing.encrypt(secretKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
-            System.out.println("Eintrag aktualisiert: " + existing.getEntryName());
-
         } catch (final Exception exception) {
             System.err.println("Fehler beim Aktualisieren des Eintrags: " + exception.getMessage());
             throw new RuntimeException(exception);
