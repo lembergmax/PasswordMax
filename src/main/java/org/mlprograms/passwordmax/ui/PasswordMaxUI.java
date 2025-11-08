@@ -102,10 +102,6 @@ public class PasswordMaxUI {
         gbc.gridwidth = 2;
         panel.add(title, gbc);
 
-        final JLabel subtitle = new JLabel("Bitte anmelden", SwingConstants.CENTER);
-        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 12f));
-        gbc.gridy = row++;
-        panel.add(subtitle, gbc);
 
         gbc.gridwidth = 1;
 
