@@ -49,8 +49,10 @@ public class PasswordMaxUI {
     private boolean isDirty = false;
     private String originalSelectedEntryName = null;
     private JButton saveChangesBtn;
+    private JButton discardChangesBtn;
     private JButton showPasswordBtn;
     private JButton generatePasswordBtn;
+    private JButton addBtnRef; // reference to enable/disable
     private boolean suppressDirty = false;
 
     public PasswordMaxUI(final AccountManager accountManager) {
@@ -78,7 +80,10 @@ public class PasswordMaxUI {
 
     // Build login panel only (separate from registration)
     private JPanel buildLoginPanel() {
+        // center a panel with fixed preferred size
+        final JPanel outer = new JPanel(new GridBagLayout());
         final JPanel panel = new JPanel(new GridBagLayout());
+        panel.setPreferredSize(new Dimension(420, 220));
         panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY, 1), new EmptyBorder(12, 12, 12, 12)));
         final GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -170,12 +175,15 @@ public class PasswordMaxUI {
         gbc.gridwidth = 2;
         panel.add(btns, gbc);
 
-        return panel;
+        outer.add(panel);
+        return outer;
     }
 
     // New: separate registration panel
     private JPanel buildRegisterPanel() {
+        final JPanel outer = new JPanel(new GridBagLayout());
         final JPanel panel = new JPanel(new GridBagLayout());
+        panel.setPreferredSize(new Dimension(420, 260));
         panel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY, 1), new EmptyBorder(12, 12, 12, 12)));
         final GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -261,7 +269,8 @@ public class PasswordMaxUI {
         gbc.gridwidth = 2;
         panel.add(btns, gbc);
 
-        return panel;
+        outer.add(panel);
+        return outer;
     }
 
     // Build the existing vault UI as a panel (slightly refactored from previous code)
@@ -327,12 +336,16 @@ public class PasswordMaxUI {
         root.add(details, BorderLayout.CENTER);
 
         // Bottom: Buttons
-        final JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        final JPanel buttons = new JPanel(new BorderLayout());
+        final JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         final JButton addBtn = new JButton("Neuen Eintrag hinzufügen");
+        addBtnRef = addBtn;
         final JButton deleteBtn = new JButton("Eintrag löschen");
-        final JButton logoutBtn = new JButton("Abmelden");
         saveChangesBtn = new JButton("Änderungen speichern");
         saveChangesBtn.setVisible(false);
+        discardChangesBtn = new JButton("Änderungen verwerfen");
+        discardChangesBtn.setVisible(false);
+        final JButton logoutBtn = new JButton("Abmelden");
 
         addBtn.setToolTipText("Füge einen neuen Eintrag mit den ausgefüllten Feldern hinzu");
         deleteBtn.setToolTipText("Lösche den aktuell ausgewählten Eintrag");
@@ -342,17 +355,21 @@ public class PasswordMaxUI {
         addBtn.addActionListener(this::onAdd);
         deleteBtn.addActionListener(this::onDelete);
         saveChangesBtn.addActionListener(this::onSave);
+        discardChangesBtn.addActionListener(e -> onDiscardChanges());
         logoutBtn.addActionListener(e -> onLogout());
 
-        // place logout left-most for visibility
-        final JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        leftButtons.add(logoutBtn);
-        root.add(leftButtons, BorderLayout.NORTH);
+        // right side: add/save/delete
+        rightButtons.add(addBtn);
+        rightButtons.add(saveChangesBtn);
+        rightButtons.add(discardChangesBtn);
+        rightButtons.add(deleteBtn);
 
-        buttons.add(addBtn);
-        buttons.add(saveChangesBtn);
-        buttons.add(deleteBtn);
+        // left side bottom: logout
+        final JPanel leftBottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        leftBottom.add(logoutBtn);
 
+        buttons.add(rightButtons, BorderLayout.EAST);
+        buttons.add(leftBottom, BorderLayout.WEST);
         root.add(buttons, BorderLayout.SOUTH);
 
         // wire show/generate
@@ -403,7 +420,18 @@ public class PasswordMaxUI {
 
     private void setDirty(final boolean dirty) {
         this.isDirty = dirty;
-        saveChangesBtn.setVisible(dirty);
+        updateActionButtonsVisibility();
+    }
+
+    private void updateActionButtonsVisibility() {
+        // If an existing entry is selected (originalSelectedEntryName != null), show Save/Discard when dirty
+        final boolean existingSelected = originalSelectedEntryName != null;
+        saveChangesBtn.setVisible(existingSelected && isDirty);
+        discardChangesBtn.setVisible(existingSelected && isDirty);
+        // Add button should be disabled when editing an existing saved entry (to avoid accidental duplicate)
+        if (addBtnRef != null) {
+            addBtnRef.setEnabled(!existingSelected);
+        }
     }
 
     private void switchToVault() {
@@ -484,6 +512,7 @@ public class PasswordMaxUI {
 
             originalSelectedEntryName = entry.getEntryName();
             setDirty(false);
+            updateActionButtonsVisibility();
 
         } catch (final Exception ex) {
             ex.printStackTrace();
@@ -501,6 +530,8 @@ public class PasswordMaxUI {
         descriptionArea.setText("");
         notesArea.setText("");
         suppressDirty = false;
+        originalSelectedEntryName = null;
+        updateActionButtonsVisibility();
     }
 
     private void onAdd(final ActionEvent e) {
@@ -524,6 +555,11 @@ public class PasswordMaxUI {
         refreshList();
         clearFields();
         setDirty(false);
+        try {
+            accountManager.saveAccount(account);
+        } catch (final Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Fehler beim Speichern nach Hinzufügen: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void onUpdate(final ActionEvent e) {
@@ -540,11 +576,28 @@ public class PasswordMaxUI {
         final int confirm = JOptionPane.showConfirmDialog(frame, "Eintrag wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        accountManager.removeEntry(account, name);
-        refreshList();
-        clearFields();
-        originalSelectedEntryName = null;
-        setDirty(false);
+        final boolean removed = accountManager.removeEntry(account, name);
+        if (removed) {
+            try {
+                accountManager.saveAccount(account);
+            } catch (final Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Eintrag entfernt, aber Speichern fehlgeschlagen: " + ex.getMessage(), "Warnung", JOptionPane.WARNING_MESSAGE);
+            }
+            refreshList();
+            clearFields();
+            setDirty(false);
+        } else {
+            JOptionPane.showMessageDialog(frame, "Eintrag nicht gefunden oder konnte nicht entfernt werden.", "Info", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void onDiscardChanges() {
+        // reload original entry values into fields
+        if (originalSelectedEntryName != null) {
+            onSelectEntry();
+        } else {
+            clearFields();
+        }
     }
 
     private void onLogout() {

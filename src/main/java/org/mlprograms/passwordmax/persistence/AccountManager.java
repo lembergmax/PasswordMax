@@ -136,15 +136,24 @@ public class AccountManager {
         System.out.println("Batch-Hinzufügen abgeschlossen: " + added + " hinzugefügt, " + skipped + " übersprungen.");
     }
 
-    public void removeEntry(final Account account, final String entryName) {
-        final Entry toRemove = account.getEntries().stream()
-                .filter(e -> e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(entryName))
-                .findFirst()
-                .orElse(null);
-
-        if (toRemove != null) {
-            account.getEntries().remove(toRemove);
+    public boolean removeEntry(final Account account, final String entryName) {
+        if (entryName == null) return false;
+        final int idx = findEntryIndex(account, entryName);
+        if (idx >= 0) {
+            account.getEntries().remove(idx);
+            return true;
         }
+        return false;
+    }
+
+    private int findEntryIndex(final Account account, final String entryName) {
+        for (int i = 0; i < account.getEntries().size(); i++) {
+            final Entry e = account.getEntries().get(i);
+            if (e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(entryName)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public void updateEntry(final Account account, final String masterPassword, final String originalEntryName, final Entry updatedEntry) {
