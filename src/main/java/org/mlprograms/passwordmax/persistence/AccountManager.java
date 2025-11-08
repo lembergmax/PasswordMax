@@ -147,15 +147,25 @@ public class AccountManager {
         }
     }
 
-    public void updateEntry(final Account account, final String masterPassword, final Entry updatedEntry) {
+    public void updateEntry(final Account account, final String masterPassword, final String originalEntryName, final Entry updatedEntry) {
         final Entry existing = account.getEntries().stream()
-                .filter(e -> e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(updatedEntry.getEntryName()))
+                .filter(e -> e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(originalEntryName))
                 .findFirst()
                 .orElse(null);
 
         if (existing == null) {
-            System.out.println("Eintrag zum Aktualisieren nicht gefunden: " + updatedEntry.getEntryName());
+            System.out.println("Eintrag zum Aktualisieren nicht gefunden: " + originalEntryName);
             return;
+        }
+
+        // Wenn der Name geändert wurde, prüfen wir, ob es einen Konflikt mit einem anderen Eintrag gibt
+        if (updatedEntry.getEntryName() != null && !updatedEntry.getEntryName().equalsIgnoreCase(originalEntryName)) {
+            final boolean conflict = account.getEntries().stream()
+                    .anyMatch(e -> e.getEntryName() != null && e.getEntryName().equalsIgnoreCase(updatedEntry.getEntryName()));
+            if (conflict) {
+                System.out.println("Eintrag mit dem neuen Namen existiert bereits: " + updatedEntry.getEntryName());
+                return;
+            }
         }
 
         try {
@@ -165,6 +175,9 @@ public class AccountManager {
             );
 
             final Cryptographer cryptographer = new Cryptographer();
+
+            // Update fields
+            existing.setEntryName(updatedEntry.getEntryName());
             existing.setEncryptedPassword(updatedEntry.getEncryptedPassword());
             existing.setDescription(updatedEntry.getDescription());
             existing.setUrl(updatedEntry.getUrl());
@@ -172,6 +185,7 @@ public class AccountManager {
             existing.setEmail(updatedEntry.getEmail());
             existing.setNotes(updatedEntry.getNotes());
 
+            // Re-encrypt all sensitive fields
             existing.encrypt(secretKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
         } catch (final Exception exception) {
             System.err.println("Fehler beim Aktualisieren des Eintrags: " + exception.getMessage());
