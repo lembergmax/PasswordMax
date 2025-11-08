@@ -53,6 +53,7 @@ public class PasswordMaxUI {
     private JButton discardChangesBtn;
     private JButton showPasswordBtn;
     private JButton generatePasswordBtn;
+    private JButton deleteBtnRef; // reference to the delete button so we can show/hide it
     private JButton addBtnRef; // reference to enable/disable
     private boolean suppressDirty = false;
 
@@ -374,6 +375,7 @@ public class PasswordMaxUI {
         final JButton addBtn = new JButton("Neuen Eintrag hinzufügen");
         addBtnRef = addBtn;
         final JButton deleteBtn = new JButton("Eintrag löschen");
+        deleteBtnRef = deleteBtn;
         saveChangesBtn = new JButton("Änderungen speichern");
         saveChangesBtn.setVisible(false);
         discardChangesBtn = new JButton("Änderungen verwerfen");
@@ -390,6 +392,8 @@ public class PasswordMaxUI {
         saveChangesBtn.addActionListener(this::onSave);
         discardChangesBtn.addActionListener(e -> onDiscardChanges());
         logoutBtn.addActionListener(e -> onLogout());
+        // delete hidden until an existing entry is selected
+        deleteBtn.setVisible(false);
 
         // right side: add/save/delete
         rightButtons.add(addBtn);
@@ -464,6 +468,9 @@ public class PasswordMaxUI {
         // Keep Add button always enabled so user can create a new entry even when one is selected
         if (addBtnRef != null) {
             addBtnRef.setEnabled(true);
+        }
+        if (deleteBtnRef != null) {
+            deleteBtnRef.setVisible(existingSelected);
         }
     }
 
