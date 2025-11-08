@@ -141,8 +141,8 @@ public class PasswordMaxUI {
             }
 
             try {
-                final Account loaded = accountManager.loadAccount();
-                if (!user.equalsIgnoreCase(loaded.getUsername())) {
+                final Account loaded = accountManager.loadAccount(user);
+                if (loaded == null || !user.equalsIgnoreCase(loaded.getUsername())) {
                     JOptionPane.showMessageDialog(frame, "Kein Account mit diesem Benutzernamen gefunden.", "Fehler", JOptionPane.ERROR_MESSAGE);
                     return;
                 }

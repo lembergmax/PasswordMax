@@ -84,9 +84,14 @@ public class AccountManager {
         return new Account(username, verificationHash, encryptionSaltBase64, new ArrayList<>(), null);
     }
 
-    public Account loadAccount() throws Exception {
+    // Load a single account by username (case-insensitive)
+    public Account loadAccount(final String username) throws Exception {
         try {
-            return getStorage().load();
+            final Account acc = getStorage().load(username);
+            if (acc == null) {
+                throw new IOException("Account nicht gefunden: " + username);
+            }
+            return acc;
         } catch (final Exception exception) {
             System.err.println("Fehler beim Laden des Accounts: " + exception.getMessage());
             throw exception;
