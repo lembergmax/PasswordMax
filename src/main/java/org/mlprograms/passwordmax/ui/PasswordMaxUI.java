@@ -32,6 +32,7 @@ public class PasswordMaxUI {
 
     private JList<String> entryList;
     private DefaultListModel<String> listModel;
+    private JPanel detailsPanel; // shown only when an entry is selected or when creating a new one
 
     private JTextField nameField;
     private JPasswordField passwordField;
@@ -292,10 +293,26 @@ public class PasswordMaxUI {
 
         final JScrollPane listScroll = new JScrollPane(entryList);
         listScroll.setPreferredSize(new Dimension(280, 0));
-        root.add(listScroll, BorderLayout.WEST);
+        // add a top panel for list actions (deselect)
+        final JPanel listPanel = new JPanel(new BorderLayout(6,6));
+        final JButton deselectBtn = new JButton("Auswahl aufheben");
+        deselectBtn.setToolTipText("Hebt die aktuelle Auswahl auf und zeigt keinen Eintrag an");
+        deselectBtn.addActionListener(evt -> {
+            entryList.clearSelection();
+            clearFields();
+            originalSelectedEntryName = null;
+            detailsPanel.setVisible(false);
+            updateActionButtonsVisibility();
+        });
+        final JPanel listTop = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        listTop.add(deselectBtn);
+        listPanel.add(listTop, BorderLayout.NORTH);
+        listPanel.add(listScroll, BorderLayout.CENTER);
+        root.add(listPanel, BorderLayout.WEST);
 
-        // Center: Details
-        final JPanel details = new JPanel(new BorderLayout(8, 8));
+        // Center: Details (hidden initially)
+        detailsPanel = new JPanel(new BorderLayout(8, 8));
+        final JPanel details = detailsPanel; // alias for local building
 
         final JPanel fields = new JPanel(new GridBagLayout());
         final GridBagConstraints gbc = new GridBagConstraints();
@@ -340,7 +357,8 @@ public class PasswordMaxUI {
 
         details.add(textAreas, BorderLayout.CENTER);
 
-        root.add(details, BorderLayout.CENTER);
+        detailsPanel.setVisible(false);
+        root.add(detailsPanel, BorderLayout.CENTER);
 
         // Bottom: Buttons
         final JPanel buttons = new JPanel(new BorderLayout());
@@ -435,9 +453,9 @@ public class PasswordMaxUI {
         final boolean existingSelected = originalSelectedEntryName != null;
         saveChangesBtn.setVisible(existingSelected && isDirty);
         discardChangesBtn.setVisible(existingSelected && isDirty);
-        // Add button should be disabled when editing an existing saved entry (to avoid accidental duplicate)
+        // Keep Add button always enabled so user can create a new entry even when one is selected
         if (addBtnRef != null) {
-            addBtnRef.setEnabled(!existingSelected);
+            addBtnRef.setEnabled(true);
         }
     }
 
@@ -478,6 +496,7 @@ public class PasswordMaxUI {
             clearFields();
             originalSelectedEntryName = null;
             setDirty(false);
+            detailsPanel.setVisible(false);
             return;
         }
         final String name = listModel.get(idx);
@@ -518,6 +537,7 @@ public class PasswordMaxUI {
             suppressDirty = false;
 
             originalSelectedEntryName = entry.getEntryName();
+            detailsPanel.setVisible(true);
             setDirty(false);
             updateActionButtonsVisibility();
 
@@ -542,6 +562,16 @@ public class PasswordMaxUI {
     }
 
     private void onAdd(final ActionEvent e) {
+        // If details panel is hidden, show it and prepare for a new entry
+        if (detailsPanel == null || !detailsPanel.isVisible() || originalSelectedEntryName != null) {
+            detailsPanel.setVisible(true);
+            clearFields();
+            originalSelectedEntryName = null; // ensure we are in create mode
+            updateActionButtonsVisibility();
+            nameField.requestFocusInWindow();
+            return;
+        }
+
         final String name = nameField.getText().trim();
         if (name.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Name darf nicht leer sein.", "Validierung", JOptionPane.WARNING_MESSAGE);
@@ -574,8 +604,9 @@ public class PasswordMaxUI {
     }
 
     private void onDelete(final ActionEvent e) {
-        final String name = nameField.getText().trim();
-        if (name.isEmpty()) {
+        final String nameFieldText = nameField.getText().trim();
+        final String targetName = (originalSelectedEntryName != null) ? originalSelectedEntryName : nameFieldText;
+        if (targetName == null || targetName.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Name darf nicht leer sein.", "Validierung", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -583,7 +614,7 @@ public class PasswordMaxUI {
         final int confirm = JOptionPane.showConfirmDialog(frame, "Eintrag wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        final boolean removed = accountManager.removeEntry(account, name);
+        final boolean removed = accountManager.removeEntry(account, targetName);
         if (removed) {
             try {
                 accountManager.saveAccount(account);
@@ -616,6 +647,7 @@ public class PasswordMaxUI {
         originalSelectedEntryName = null;
         listModel.clear();
         clearFields();
+        if (detailsPanel != null) detailsPanel.setVisible(false);
         setDirty(false);
         suppressDirty = false;
 
