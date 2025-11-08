@@ -330,16 +330,24 @@ public class PasswordMaxUI {
         final JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         final JButton addBtn = new JButton("Neuen Eintrag hinzufügen");
         final JButton deleteBtn = new JButton("Eintrag löschen");
+        final JButton logoutBtn = new JButton("Abmelden");
         saveChangesBtn = new JButton("Änderungen speichern");
         saveChangesBtn.setVisible(false);
 
         addBtn.setToolTipText("Füge einen neuen Eintrag mit den ausgefüllten Feldern hinzu");
         deleteBtn.setToolTipText("Lösche den aktuell ausgewählten Eintrag");
         saveChangesBtn.setToolTipText("Speichere Änderungen an diesem Eintrag");
+        logoutBtn.setToolTipText("Vom aktuellen Account abmelden und zurück zur Anmeldung");
 
         addBtn.addActionListener(this::onAdd);
         deleteBtn.addActionListener(this::onDelete);
         saveChangesBtn.addActionListener(this::onSave);
+        logoutBtn.addActionListener(e -> onLogout());
+
+        // place logout left-most for visibility
+        final JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        leftButtons.add(logoutBtn);
+        root.add(leftButtons, BorderLayout.NORTH);
 
         buttons.add(addBtn);
         buttons.add(saveChangesBtn);
@@ -537,6 +545,22 @@ public class PasswordMaxUI {
         clearFields();
         originalSelectedEntryName = null;
         setDirty(false);
+    }
+
+    private void onLogout() {
+        // Clear sensitive data and switch to login view
+        suppressDirty = true;
+        account = null;
+        masterPassword = null;
+        secretKey = null;
+        originalSelectedEntryName = null;
+        listModel.clear();
+        clearFields();
+        setDirty(false);
+        suppressDirty = false;
+
+        final CardLayout cl = (CardLayout) (cards.getLayout());
+        cl.show(cards, CARD_LOGIN);
     }
 
     private void onSave(final ActionEvent e) {
