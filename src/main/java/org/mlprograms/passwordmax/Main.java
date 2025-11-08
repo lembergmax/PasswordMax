@@ -3,18 +3,11 @@ package org.mlprograms.passwordmax;
 import org.mlprograms.passwordmax.model.Account;
 import org.mlprograms.passwordmax.model.Entry;
 import org.mlprograms.passwordmax.persistence.AccountManager;
-import org.mlprograms.passwordmax.security.CryptoUtils;
-import org.mlprograms.passwordmax.security.Cryptographer;
+import org.mlprograms.passwordmax.ui.PasswordMaxUI;
 
-import javax.crypto.SecretKey;
-import java.util.Base64;
 import java.util.List;
 
 public final class Main {
-
-    private static final CryptoUtils cryptoUtils = new CryptoUtils();
-    private static final Cryptographer cryptographer = new Cryptographer();
-    private static final byte[] ADDITIONAL_AUTHENTICATED_DATA = "user:1234".getBytes();
 
     public static void main(final String[] args) throws Exception {
         final AccountManager accountManager = new AccountManager();
@@ -38,8 +31,14 @@ public final class Main {
         // Speichere die Änderungen
         accountManager.saveAccount(account);
 
-        final SecretKey aesKey = login(masterPassword, account);
-        displayVault(account, aesKey);
+        // Starte GUI
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                new PasswordMaxUI(accountManager, account, masterPassword).show();
+            } catch (final Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private static void addSampleData(final Account account, final String masterPassword, final AccountManager accountManager) {
@@ -65,24 +64,6 @@ public final class Main {
 
         accountManager.addEntry(account, masterPassword, entry1);
         accountManager.addEntry(account, masterPassword, entry2);
-    }
-
-    private static SecretKey login(final String masterPassword, final Account account) throws Exception {
-        if (!cryptoUtils.verifyPassword(masterPassword, account.getVerificationHash())) {
-            throw new IllegalArgumentException("Falsches Passwort!");
-        }
-
-        return cryptoUtils.deriveEncryptionKey(
-                masterPassword,
-                Base64.getDecoder().decode(account.getEncryptionSaltBase64())
-        );
-    }
-
-    private static void displayVault(final Account account, final SecretKey aesKey) throws Exception {
-        for (final Entry entry : account.getEntries()) {
-            entry.decrypt(aesKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
-            System.out.println(entry);
-        }
     }
 
 }

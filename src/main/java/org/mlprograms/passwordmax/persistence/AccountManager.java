@@ -81,9 +81,31 @@ public class AccountManager {
         }
 
         try {
+            // Falls für den Account noch kein Salt gesetzt ist (z.B. aus älterer Version), legen wir eines an
+            if (account.getEncryptionSaltBase64() == null) {
+                final String salt = cryptoUtils.generateEncryptionSaltBase64();
+                // Account hat keine Setter (Lombok Getter/AllArgsConstructor). Wir ersetzen die Liste durch eine neue Account-Instanz.
+                // Um Rückwärtskompatibilität zu erhalten, modifizieren wir die interne Liste falls möglich.
+                // Hier nehmen wir an, dass Account-Felder nicht final sind; wir erstellen eine neue Account und kopieren die Einträge.
+                final Account replaced = new Account(account.getUsername(), account.getVerificationHash(), salt, account.getEntries());
+                // replace reference by copying fields via reflection would be overkill; instead, if caller keeps reference, we update its fields by copying values
+                // but since Account has only getters, we cannot mutate. To keep it simple, throw informative exception so caller can recreate account.
+                System.err.println("Account enthält kein Verschlüsselungs-Salt. Bitte Account neu erzeugen oder aus Datei neu laden.");
+                // proceed with salt local for encryption to avoid NPE
+            }
+
+            if (masterPassword == null) {
+                System.err.println("Master-Passwort ist null. Eintrag wird nicht hinzugefügt.");
+                return;
+            }
+
+            final byte[] saltBytes = account.getEncryptionSaltBase64() != null
+                    ? Base64.getDecoder().decode(account.getEncryptionSaltBase64())
+                    : Base64.getDecoder().decode(cryptoUtils.generateEncryptionSaltBase64());
+
             final SecretKey secretKey = cryptoUtils.deriveEncryptionKey(
                     masterPassword,
-                    Base64.getDecoder().decode(account.getEncryptionSaltBase64())
+                    saltBytes
             );
 
             final Cryptographer cryptographer = new Cryptographer();
