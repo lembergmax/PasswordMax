@@ -27,7 +27,9 @@ public final class AccountStorage {
         final File directory = new File(userHome, PASSWORDMAX_FOLDER);
 
         if (!directory.exists()) {
-            directory.mkdirs();
+            if (!directory.mkdirs()) {
+                System.err.println("Konnte Verzeichnis nicht anlegen: " + directory.getAbsolutePath());
+            }
 
             if (System.getProperty(OS_NAME).toLowerCase().contains(WIN)) {
                 try {
@@ -43,7 +45,6 @@ public final class AccountStorage {
 
     public void save(final Account account) throws IOException {
         final File file = getDefaultFile();
-        // Allow overwriting the existing file when saving updates to the account
         try (FileWriter writer = new FileWriter(file)) {
             gson.toJson(account, writer);
         }

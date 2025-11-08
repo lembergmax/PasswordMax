@@ -8,7 +8,6 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Objects;
-import java.util.Arrays;
 
 public class CryptoUtils {
 
@@ -27,11 +26,9 @@ public class CryptoUtils {
 
         final byte[] hash = pbkdf2(masterPassword, salt, PBKDF2_ITERATIONS, KEY_LENGTH_BITS);
 
-        final String stored = "v1:" + PBKDF2_ITERATIONS + ":" +
+        return "v1:" + PBKDF2_ITERATIONS + ":" +
                 Base64.getEncoder().encodeToString(salt) + ":" +
                 Base64.getEncoder().encodeToString(hash);
-
-        return stored;
     }
 
     public boolean verifyPassword(final String attemptString, final String stored) throws Exception {
@@ -49,9 +46,7 @@ public class CryptoUtils {
         final byte[] expectedHash = Base64.getDecoder().decode(parts[3]);
 
         final byte[] attemptHash = pbkdf2(attempt, salt, iterations, expectedHash.length * 8);
-        final boolean matches = MessageDigest.isEqual(expectedHash, attemptHash);
-
-        return matches;
+        return MessageDigest.isEqual(expectedHash, attemptHash);
     }
 
     public SecretKey deriveEncryptionKey(final String masterPasswordString, final byte[] encryptionSalt) throws Exception {

@@ -8,6 +8,7 @@ import org.mlprograms.passwordmax.security.Cryptographer;
 
 import javax.crypto.SecretKey;
 import java.util.Base64;
+import java.util.List;
 
 public final class Main {
 
@@ -28,23 +29,39 @@ public final class Main {
         // Speichere Account in die Standard-Datei
         accountManager.saveAccount(account);
 
+        // Füge weitere Einträge zu dem bestehenden Account hinzu (Batch)
+        final Entry more1 = new Entry("Forum", "forumPass", "Forum Account", "https://forum.example", "maxForum", "", "");
+        final Entry more2 = new Entry("E-Mail Konto", "anotherPass", "Doppelter Name Test", "", "", "alt@example.com", "");
+        // more2 hat denselben Namen wie entry1 in addSampleData -> wird übersprungen
+        accountManager.addEntries(account, masterPassword, List.of(more1, more2));
+
+        // Speichere die Änderungen
+        accountManager.saveAccount(account);
+
         final SecretKey aesKey = login(masterPassword, account);
         displayVault(account, aesKey);
     }
 
     private static void addSampleData(final Account account, final String masterPassword, final AccountManager accountManager) {
-        // Beispiel-Entries hinzufügen (Passwörter werden im addEntry verschlüsselt)
-        final Entry entry1 = new Entry();
-        entry1.setEntryName("ExampleSite");
-        entry1.setEncryptedPassword("password123");
-        entry1.setUrl("https://example.com");
-        entry1.setUsername("max");
+        final Entry entry1 = new Entry(
+                "E-Mail Konto",
+                "12345!@#$%",
+                "Mein Haupt E-Mail Konto",
+                "",
+                "",
+                "max.mustermann@gmail.com",
+                ""
+        );
 
-        final Entry entry2 = new Entry();
-        entry2.setEntryName("MailService");
-        entry2.setEncryptedPassword("mailpass");
-        entry2.setUrl("https://mail.example.com");
-        entry2.setUsername("max@mail.com");
+        final Entry entry2 = new Entry(
+                "Social Media",
+                "pa$$w0rd",
+                "Mein Social Media Konto",
+                "https://www.socialmedia.com",
+                "maxmustermann",
+                "",
+                "Hier sind meine Social Media Zugangsdaten."
+        );
 
         accountManager.addEntry(account, masterPassword, entry1);
         accountManager.addEntry(account, masterPassword, entry2);
@@ -64,11 +81,7 @@ public final class Main {
     private static void displayVault(final Account account, final SecretKey aesKey) throws Exception {
         for (final Entry entry : account.getEntries()) {
             entry.decrypt(aesKey, ADDITIONAL_AUTHENTICATED_DATA, cryptographer);
-            System.out.println("Eintrag: " + entry.getEntryName());
-            System.out.println("  Passwort: " + entry.getEncryptedPassword());
-            System.out.println("  URL: " + entry.getUrl());
-            System.out.println("  Username: " + entry.getUsername());
-            System.out.println();
+            System.out.println(entry);
         }
     }
 
