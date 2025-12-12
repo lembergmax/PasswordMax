@@ -6,6 +6,14 @@ Das Projekt eignet sich sowohl für den praktischen Einsatz im kleinen Rahmen al
 
 ---
 
+<img width="933" height="642" alt="image" src="https://github.com/user-attachments/assets/985fd85a-cd0a-42fd-a75f-6af7c4f6a039" />
+<img width="935" height="644" alt="image" src="https://github.com/user-attachments/assets/0d19f9ee-75f9-4508-91f1-06de1210dd9f" />
+<img width="940" height="646" alt="image" src="https://github.com/user-attachments/assets/18ce1622-de6f-452c-837f-ddf28fa02f3d" />
+<img width="942" height="646" alt="image" src="https://github.com/user-attachments/assets/e3afca3b-437c-40b8-9f16-bd4e3ba85fe2" />
+<img width="942" height="643" alt="image" src="https://github.com/user-attachments/assets/0e0cd76f-f637-4f87-8500-1cbdb16e5ac8" />
+<img width="938" height="648" alt="image" src="https://github.com/user-attachments/assets/b5d0b24e-6df0-43ab-95e9-e83333d9a152" />
+
+
 ## Verwendung (Kurzanleitung)
 
 1. **Programm starten**  
